@@ -1,0 +1,17 @@
+# Gradle / build output
+.gradle/
+build/
+*/build/
+.kotlin/
+
+# Android Studio / IDE
+.idea/
+*.iml
+local.properties
+.DS_Store
+
+# Secrets and signing keys (never commit)
+*.jks
+*.keystore
+keystore.properties
+google-services.json
