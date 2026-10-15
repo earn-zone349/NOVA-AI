@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Onboarding -->
+    <string name="onboarding_step_format">%1$d / %2$d</string>
+    <string name="onboarding_next">পরের ধাপ</string>
+    <string name="onboarding_back">আগের ধাপ</string>
+    <string name="onboarding_start">শুরু করো</string>
+
+    <string name="onboarding_welcome_emoji">🤖</string>
+    <string name="onboarding_welcome_title">NOVA AI-তে স্বাগতম</string>
+    <string name="onboarding_welcome_body">আমি তোমার পার্সোনাল ফোন এজেন্ট। তোমার নির্দেশ বুঝে ফোনের কাজ ধাপে ধাপে করব, আর গুরুত্বপূর্ণ কাজের আগে তোমার অনুমতি নেব।</string>
+
+    <string name="onboarding_features_title">যা যা করা যাবে</string>
+    <string name="onboarding_feature_voice_title">🎙️ ভয়েস কমান্ড</string>
+    <string name="onboarding_feature_voice_body">বাংলা, ইংরেজি ও মিশ্র ভাষায় নির্দেশ দেওয়া যাবে।</string>
+    <string name="onboarding_feature_apps_title">📱 অ্যাপ ও স্ক্রিনের কাজ</string>
+    <string name="onboarding_feature_apps_body">অ্যাপ খোলা, ক্লিক, লেখা ও একাধিক ধাপের কাজ।</string>
+    <string name="onboarding_feature_privacy_title">🛡️ গোপনীয়তা</string>
+    <string name="onboarding_feature_privacy_body">তোমার তথ্য ফোনেই থাকবে। কোনো Paid AI API লাগবে না।</string>
+
+    <string name="onboarding_prefs_title">তোমার পছন্দ বেছে নাও</string>
+    <string name="onboarding_prefs_note">এগুলো পরে AI Brain ট্যাব থেকে বদলানো যাবে।</string>
+
+    <!-- Settings choices -->
+    <string name="settings_theme_title">থিম</string>
+    <string name="settings_theme_system">ফোনের সেটিং অনুযায়ী</string>
+    <string name="settings_theme_light">লাইট</string>
+    <string name="settings_theme_dark">ডার্ক</string>
+
+    <string name="settings_language_title">ভাষা</string>
+    <string name="settings_language_bangla">বাংলা</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_mixed">মিশ্র (বাংলা + English)</string>
+
+    <string name="settings_appearance_card_title">চেহারা ও ভাষা</string>
+</resources>
