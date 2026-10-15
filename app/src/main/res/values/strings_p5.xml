@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="privacy_logs_title">অ্যাপ লগ</string>
+    <string name="privacy_logs_count">মোট লগ: %1$d</string>
+    <string name="privacy_logs_empty">কোনো লগ নেই।</string>
+    <string name="privacy_logs_refresh">রিফ্রেশ</string>
+    <string name="privacy_test_crash_title">ক্র্যাশ পরীক্ষা (শুধু ডিবাগ বিল্ডে)</string>
+    <string name="privacy_test_crash_note">বাটন চাপলে অ্যাপ ইচ্ছাকৃতভাবে বন্ধ হবে। আবার খুলে Privacy ট্যাবে রিফ্রেশ দিলে FATAL লগ দেখা যাবে।</string>
+    <string name="privacy_test_crash_button">টেস্ট ক্র্যাশ</string>
+</resources>
