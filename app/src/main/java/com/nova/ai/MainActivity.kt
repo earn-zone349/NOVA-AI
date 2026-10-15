@@ -4,18 +4,16 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import com.nova.ai.ui.navigation.NovaMainScaffold
 
 /**
- * Single-activity host. Phase 3 replaces the placeholder with the navigation graph.
+ * Single-activity host. Shows the navigation graph (Home, Brain, Tasks,
+ * Access, Memory, Privacy). The theme is upgraded in Phase 4.
  */
 class MainActivity : ComponentActivity() {
 
@@ -33,17 +31,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** Temporary root screen used to verify the first build. */
+/** Root composable: theme, surface and the main scaffold. */
 @Composable
 private fun NovaRoot() {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = stringResource(id = R.string.home_status_ready))
-            }
+            NovaMainScaffold()
         }
     }
 }

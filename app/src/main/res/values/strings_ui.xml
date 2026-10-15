@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bottom navigation labels -->
+    <string name="nav_home">Home</string>
+    <string name="nav_brain">Brain</string>
+    <string name="nav_automation">Tasks</string>
+    <string name="nav_permissions">Access</string>
+    <string name="nav_memory">Memory</string>
+    <string name="nav_privacy">Privacy</string>
+
+    <!-- Home -->
+    <string name="home_title">NOVA AI</string>
+    <string name="home_subtitle">তোমার পার্সোনাল ফোন এজেন্ট</string>
+    <string name="home_voice_button_desc">ভয়েস বাটন</string>
+    <string name="home_status_label">অবস্থা</string>
+    <string name="home_status_idle">প্রস্তুত। ভয়েস কমান্ড P6-এ চালু হবে।</string>
+    <string name="home_command_hint">কমান্ড লেখো</string>
+    <string name="home_send">পাঠাও</string>
+    <string name="home_status_command_received">কমান্ড নেওয়া হয়েছে। বোঝার ইঞ্জিন P11-এ যোগ হবে।</string>
+    <string name="home_status_empty_command">আগে একটি কমান্ড লেখো।</string>
+    <string name="home_progress_title">চলমান কাজ</string>
+    <string name="home_progress_none">কোনো কাজ চলছে না।</string>
+
+    <!-- AI Brain -->
+    <string name="brain_title">AI Brain</string>
+    <string name="brain_subtitle">লোকাল মডেল ও ভাষা সেটিংস</string>
+    <string name="brain_model_title">চালু মডেল</string>
+    <string name="brain_model_none">কোনো মডেল ইনস্টল করা নেই (P37-এ যোগ হবে)।</string>
+    <string name="brain_ram_title">RAM ব্যবহার</string>
+    <string name="brain_ram_none">মডেল চালু না থাকায় প্রযোজ্য নয়।</string>
+    <string name="brain_offline_title">অফলাইন অবস্থা</string>
+    <string name="brain_offline_body">নিয়মভিত্তিক ইঞ্জিন দিয়ে শুরু হবে, মডেল পরে যুক্ত হবে।</string>
+    <string name="brain_language_title">ভাষা ও ভয়েস</string>
+    <string name="brain_language_body">বাংলা ও ইংরেজি (সেটিংস P6-এ যোগ হবে)।</string>
+
+    <!-- Automation -->
+    <string name="automation_title">Automation</string>
+    <string name="automation_subtitle">রুটিন, টাস্ক ইতিহাস ও নিয়ন্ত্রণ</string>
+    <string name="automation_routines_title">রুটিন</string>
+    <string name="automation_routines_none">কোনো রুটিন তৈরি করা হয়নি (P34)।</string>
+    <string name="automation_history_title">টাস্ক ইতিহাস</string>
+    <string name="automation_history_none">এখনো কোনো কাজ চালানো হয়নি (P25)।</string>
+    <string name="automation_stop_button">সব কাজ থামাও</string>
+    <string name="automation_stop_note">জরুরি Stop P22-তে চালু হবে।</string>
+
+    <!-- Permissions -->
+    <string name="permissions_title">Permissions</string>
+    <string name="permissions_subtitle">কোন সুবিধা কেন দরকার</string>
+    <string name="perm_accessibility_title">Accessibility</string>
+    <string name="perm_accessibility_body">স্ক্রিনের লেখা পড়তে এবং ক্লিক বা স্ক্রল করতে লাগবে।</string>
+    <string name="perm_microphone_title">মাইক্রোফোন</string>
+    <string name="perm_microphone_body">তোমার ভয়েস কমান্ড শুনতে লাগবে।</string>
+    <string name="perm_notification_title">নোটিফিকেশন</string>
+    <string name="perm_notification_body">ব্যাকগ্রাউন্ডে চলার ইন্ডিকেটর দেখাতে লাগবে।</string>
+    <string name="perm_status_pending">অবস্থা: এখনো চালু হয়নি (P17-এ গাইড যোগ হবে)</string>
+
+    <!-- Memory -->
+    <string name="memory_title">Memory</string>
+    <string name="memory_subtitle">সংরক্ষিত পছন্দ ও তথ্য</string>
+    <string name="memory_enabled_label">মেমোরি চালু</string>
+    <string name="memory_empty">কোনো তথ্য সংরক্ষিত নেই (P33-এ সম্পূর্ণ হবে)।</string>
+    <string name="memory_actions_note">দেখা, এডিট ও মোছার সুবিধা P33-এ আসবে।</string>
+
+    <!-- Privacy and Security -->
+    <string name="privacy_title">Privacy and Security</string>
+    <string name="privacy_subtitle">ডেটা ও নিরাপত্তা নিয়ন্ত্রণ</string>
+    <string name="privacy_local_title">লোকাল ডেটা</string>
+    <string name="privacy_local_body">তোমার তথ্য ফোনেই থাকবে।</string>
+    <string name="privacy_sensitive_title">সংবেদনশীল কাজ</string>
+    <string name="privacy_sensitive_body">টাকা পাঠানোর মতো কাজে সবসময় তোমার অনুমতি নেওয়া হবে (P35)।</string>
+    <string name="privacy_log_title">নিরাপত্তা লগ</string>
+    <string name="privacy_log_body">কাজের ইতিহাস এখানে দেখা যাবে (P36)।</string>
+</resources>
