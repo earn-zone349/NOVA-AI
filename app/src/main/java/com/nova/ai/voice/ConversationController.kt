@@ -14,6 +14,8 @@ import com.nova.ai.logging.NovaLogger
  * - After each command the app can speak a reply ([replyProvider]); listening
  *   restarts only after the speech finished, so the app never hears itself.
  * - Ends on: user stop, a stop phrase, repeated silence, or an unrecoverable error.
+ * - Short-lived voice-service problems are retried (up to [MAX_GLITCH_RETRIES]
+ *   times in a row) with a growing wait, instead of ending the conversation.
  * - When [continuousProvider] returns false, it handles a single turn only.
  *
  * Use from the main thread only.
@@ -29,6 +31,7 @@ class ConversationController(
     private var active: Boolean = false
     private var state: ConversationState = ConversationState.IDLE
     private var missCount: Int = 0
+    private var glitchCount: Int = 0
     private var restartTask: Runnable? = null
 
     /** True while a conversation is running. */
@@ -43,6 +46,7 @@ class ConversationController(
 
         active = true
         missCount = 0
+        glitchCount = 0
         val result: NovaResult<Unit> = beginListening()
         if (result is NovaResult.Failure) {
             active = false
@@ -95,7 +99,9 @@ class ConversationController(
     }
 
     private fun handleCommand(command: VoiceCommand) {
+        // A real command proves the voice service works, so clear both counters.
         missCount = 0
+        glitchCount = 0
 
         if (StopPhrases.isStopCommand(command.rawText)) {
             finish(ConversationEnd.StopPhrase)
@@ -120,37 +126,52 @@ class ConversationController(
     }
 
     private fun handleError(error: NovaError) {
-        val nothingHeard: Boolean =
-            error.code == ErrorCode.TIMEOUT || error.code == ErrorCode.NOT_FOUND
-
-        if (continuousProvider() && nothingHeard) {
-            missCount += 1
-            if (missCount >= MAX_CONSECUTIVE_MISSES) {
-                finish(ConversationEnd.SilenceTimeout)
-            } else {
-                scheduleRestart()
-            }
-        } else {
+        // Single-turn mode: any problem ends the turn.
+        if (!continuousProvider()) {
             finish(ConversationEnd.Failed(error))
+            return
+        }
+
+        when (error.code) {
+            ErrorCode.TIMEOUT, ErrorCode.NOT_FOUND -> {
+                missCount += 1
+                if (missCount >= MAX_CONSECUTIVE_MISSES) {
+                    finish(ConversationEnd.SilenceTimeout)
+                } else {
+                    scheduleRestart(RESTART_DELAY_MS)
+                }
+            }
+            ErrorCode.TEMPORARY_FAILURE -> {
+                glitchCount += 1
+                if (glitchCount > MAX_GLITCH_RETRIES) {
+                    NovaLogger.w(TAG, "Giving up after $MAX_GLITCH_RETRIES retries")
+                    finish(ConversationEnd.Failed(error))
+                } else {
+                    val waitMs: Long = GLITCH_RETRY_BASE_MS * glitchCount
+                    NovaLogger.w(TAG, "Voice service glitch, retry $glitchCount in $waitMs ms")
+                    scheduleRestart(waitMs)
+                }
+            }
+            else -> finish(ConversationEnd.Failed(error))
         }
     }
 
     private fun continueOrFinish() {
         if (!active) return
         if (continuousProvider()) {
-            scheduleRestart()
+            scheduleRestart(RESTART_DELAY_MS)
         } else {
             finish(ConversationEnd.SingleCompleted)
         }
     }
 
-    private fun scheduleRestart() {
+    private fun scheduleRestart(delayMs: Long) {
         if (!active) return
         cancelRestart()
         setState(ConversationState.WAITING)
         val task = Runnable { restartListening() }
         restartTask = task
-        handler.postDelayed(task, RESTART_DELAY_MS)
+        handler.postDelayed(task, delayMs)
     }
 
     private fun restartListening() {
@@ -158,7 +179,8 @@ class ConversationController(
         if (!active) return
         val result: NovaResult<Unit> = beginListening()
         if (result is NovaResult.Failure) {
-            finish(ConversationEnd.Failed(result.error))
+            // Starting can fail for a short moment too (recognizer busy); retry the same way.
+            handleError(result.error)
         }
     }
 
@@ -194,6 +216,8 @@ class ConversationController(
     private companion object {
         const val TAG: String = "ConversationController"
         const val MAX_CONSECUTIVE_MISSES: Int = 2
-        const val RESTART_DELAY_MS: Long = 500L
+        const val MAX_GLITCH_RETRIES: Int = 3
+        const val RESTART_DELAY_MS: Long = 800L
+        const val GLITCH_RETRY_BASE_MS: Long = 1200L
     }
 }

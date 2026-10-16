@@ -10,7 +10,8 @@ enum class ErrorCode {
     TIMEOUT,
     CANCELLED,
     SECURITY_BLOCKED,
-    EXECUTION_FAILED
+    EXECUTION_FAILED,
+    TEMPORARY_FAILURE
 }
 
 /** Structured error carried by [NovaResult.Failure]. */
