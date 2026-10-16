@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intent_title">বোঝা উদ্দেশ্য</string>
+    <string name="intent_confidence">নিশ্চিততা: %1$d%%</string>
+    <string name="intent_note">বোঝা হয়ে গেছে। কাজটি সত্যি করা শুরু হবে P12 থেকে।</string>
+    <string name="intent_unknown_hint">এই কমান্ডটি এখনো বুঝতে পারিনি। অন্যভাবে বলে দেখো।</string>
+    <string name="intent_error">বিশ্লেষণে সমস্যা: %1$s</string>
+
+    <string name="intent_type_open_app">উদ্দেশ্য: অ্যাপ খোলা</string>
+    <string name="intent_type_send_message">উদ্দেশ্য: মেসেজ পাঠানো</string>
+    <string name="intent_type_make_call">উদ্দেশ্য: কল করা</string>
+    <string name="intent_type_web_search">উদ্দেশ্য: সার্চ করা</string>
+    <string name="intent_type_system_action">উদ্দেশ্য: সিস্টেম কাজ</string>
+    <string name="intent_type_set_alarm">উদ্দেশ্য: অ্যালার্ম / টাইমার / রিমাইন্ডার</string>
+    <string name="intent_type_media_control">উদ্দেশ্য: গান / মিডিয়া নিয়ন্ত্রণ</string>
+    <string name="intent_type_unknown">উদ্দেশ্য: বোঝা যায়নি</string>
+
+    <string name="intent_entity_app">অ্যাপ</string>
+    <string name="intent_entity_app_source">অ্যাপের উৎস</string>
+    <string name="intent_entity_query">খোঁজার বিষয়</string>
+    <string name="intent_entity_contact">ব্যক্তি</string>
+    <string name="intent_entity_number">নম্বর</string>
+    <string name="intent_entity_body">বার্তা</string>
+    <string name="intent_entity_action">কাজ</string>
+    <string name="intent_entity_target">লক্ষ্য</string>
+    <string name="intent_entity_value">মান</string>
+    <string name="intent_entity_mode">ধরন</string>
+    <string name="intent_entity_hour">ঘণ্টা</string>
+    <string name="intent_entity_minute">মিনিট</string>
+    <string name="intent_entity_period">সময়ের ভাগ</string>
+    <string name="intent_entity_hour24">২৪ ঘণ্টার হিসাবে ঘণ্টা</string>
+    <string name="intent_entity_duration">সময়কাল</string>
+
+    <string name="intent_value_on">চালু</string>
+    <string name="intent_value_off">বন্ধ</string>
+    <string name="intent_value_up">বাড়ানো</string>
+    <string name="intent_value_down">কমানো</string>
+    <string name="intent_value_set">নির্দিষ্ট মানে করা</string>
+    <string name="intent_value_mute">শব্দ বন্ধ (মিউট)</string>
+    <string name="intent_value_open_settings">সেটিংস খোলা</string>
+    <string name="intent_value_play">চালানো</string>
+    <string name="intent_value_pause">থামানো (পজ)</string>
+    <string name="intent_value_next">পরের গান</string>
+    <string name="intent_value_previous">আগের গান</string>
+    <string name="intent_value_wifi">ওয়াইফাই</string>
+    <string name="intent_value_bluetooth">ব্লুটুথ</string>
+    <string name="intent_value_flashlight">টর্চ</string>
+    <string name="intent_value_volume">ভলিউম</string>
+    <string name="intent_value_brightness">ব্রাইটনেস</string>
+    <string name="intent_value_alarm">অ্যালার্ম</string>
+    <string name="intent_value_timer">টাইমার</string>
+    <string name="intent_value_reminder">রিমাইন্ডার</string>
+    <string name="intent_value_am">সকাল (AM)</string>
+    <string name="intent_value_pm">দুপুর থেকে রাত (PM)</string>
+    <string name="intent_value_unknown">জানা নেই</string>
+    <string name="intent_value_context">আগের কমান্ড থেকে</string>
+
+    <string name="intent_duration_hours">%1$d ঘণ্টা</string>
+    <string name="intent_duration_minutes">%1$d মিনিট</string>
+    <string name="intent_duration_seconds">%1$d সেকেন্ড</string>
+</resources>
