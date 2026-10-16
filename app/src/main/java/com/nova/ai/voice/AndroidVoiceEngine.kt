@@ -101,6 +101,19 @@ class AndroidVoiceEngine(
         }
     }
 
+    override fun speakThen(
+        text: String,
+        language: Language,
+        onFinished: () -> Unit
+    ): NovaResult<Unit> {
+        return try {
+            obtainSpeaker().speak(text, language, speechRateProvider(), onFinished)
+        } catch (e: Exception) {
+            NovaLogger.e(TAG, "Speak request failed", e)
+            NovaResult.failure(ErrorCode.EXECUTION_FAILED, "কথা বলতে সমস্যা হয়েছে।", e)
+        }
+    }
+
     override fun stopSpeaking() {
         try {
             speaker?.stop()

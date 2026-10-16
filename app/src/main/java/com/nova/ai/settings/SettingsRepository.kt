@@ -43,6 +43,12 @@ class SettingsRepository(context: Context) {
 
     fun setVoiceReplyEnabled(enabled: Boolean) = writeBoolean(KEY_VOICE_REPLY, enabled)
 
+    fun isContinuousConversationEnabled(): Boolean =
+        readBoolean(KEY_CONTINUOUS_CONVERSATION, true)
+
+    fun setContinuousConversationEnabled(enabled: Boolean) =
+        writeBoolean(KEY_CONTINUOUS_CONVERSATION, enabled)
+
     fun isOnboardingDone(): Boolean = readBoolean(KEY_ONBOARDING_DONE, false)
 
     fun setOnboardingDone(done: Boolean) = writeBoolean(KEY_ONBOARDING_DONE, done)
@@ -88,5 +94,6 @@ class SettingsRepository(context: Context) {
         const val KEY_ONBOARDING_DONE: String = "onboarding_done"
         const val KEY_SPEECH_SPEED: String = "speech_speed"
         const val KEY_VOICE_REPLY: String = "voice_reply_enabled"
+        const val KEY_CONTINUOUS_CONVERSATION: String = "continuous_conversation"
     }
 }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_status_speaking">বলছি...</string>
+    <string name="home_status_next_turn">পরের কথার জন্য প্রস্তুত হচ্ছি...</string>
+    <string name="home_status_listening_count">শুনছি... এখন বলো। (এ পর্যন্ত %1$d টি কমান্ড)</string>
+    <string name="home_status_ended_user">কথোপকথন বন্ধ করেছো।</string>
+    <string name="home_status_ended_phrase">ঠিক আছে, কথোপকথন বন্ধ করলাম।</string>
+    <string name="home_status_ended_silence">অনেকক্ষণ কিছু শোনা যায়নি, তাই কথোপকথন বন্ধ হয়েছে। আবার মাইক চাপো।</string>
+    <string name="home_voice_stop_ack">ঠিক আছে, বন্ধ করছি।</string>
+    <string name="home_voice_stop_ack_en">Okay, stopping.</string>
+    <string name="home_continuous_label">ধারাবাহিক কথোপকথন</string>
+    <string name="home_continuous_hint">চালু থাকলে প্রতিবার মাইক চাপতে হবে না। থামো বা stop বললে বন্ধ হবে।</string>
+    <string name="home_transcript_title">এই কথোপকথনের কমান্ড</string>
+</resources>

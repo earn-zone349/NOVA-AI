@@ -18,12 +18,21 @@ import java.util.Locale
  * is still starting is kept and played as soon as it is ready.
  * Problems that happen later (after [speak] already returned) are sent to
  * the problem listener on the main thread.
+ *
+ * The optional `onFinished` callback runs on the main thread when the speech
+ * ends or fails later. It is dropped if the speech is stopped, replaced by a
+ * newer request, or the speaker is shut down.
  */
 class TtsSpeaker(context: Context) {
 
     private enum class SpeakerState { NOT_STARTED, INITIALIZING, READY, FAILED }
 
-    private data class SpeakRequest(val text: String, val locale: Locale, val rate: Float)
+    private data class SpeakRequest(
+        val text: String,
+        val locale: Locale,
+        val rate: Float,
+        val onFinished: (() -> Unit)?
+    )
 
     private val appContext: Context = context.applicationContext
     private val lock: Any = Any()
@@ -33,6 +42,8 @@ class TtsSpeaker(context: Context) {
     private var state: SpeakerState = SpeakerState.NOT_STARTED
     private var pendingRequest: SpeakRequest? = null
     private var utteranceCounter: Long = 0L
+    private var activeUtteranceId: String? = null
+    private var activeFinished: (() -> Unit)? = null
 
     @Volatile
     private var problemListener: ((NovaError) -> Unit)? = null
@@ -43,7 +54,12 @@ class TtsSpeaker(context: Context) {
     }
 
     /** Speaks [text] in [language] at [rate] (1.0 is normal speed). */
-    fun speak(text: String, language: Language, rate: Float): NovaResult<Unit> {
+    fun speak(
+        text: String,
+        language: Language,
+        rate: Float,
+        onFinished: (() -> Unit)? = null
+    ): NovaResult<Unit> {
         val cleaned: String = text.trim()
         if (cleaned.isEmpty()) {
             return NovaResult.failure(ErrorCode.INVALID_INPUT, "বলার মতো কোনো লেখা নেই।")
@@ -51,7 +67,8 @@ class TtsSpeaker(context: Context) {
         val request = SpeakRequest(
             text = cleaned.take(MAX_TEXT_LENGTH),
             locale = localeFor(language),
-            rate = rate.coerceIn(MIN_RATE, MAX_RATE)
+            rate = rate.coerceIn(MIN_RATE, MAX_RATE),
+            onFinished = onFinished
         )
 
         synchronized(lock) {
@@ -76,10 +93,11 @@ class TtsSpeaker(context: Context) {
         }
     }
 
-    /** Stops the current speech and drops any waiting request. */
+    /** Stops the current speech and drops any waiting request and callback. */
     fun stop() {
         synchronized(lock) {
             pendingRequest = null
+            clearActiveLocked()
             try {
                 engine?.stop()
             } catch (e: Exception) {
@@ -101,6 +119,7 @@ class TtsSpeaker(context: Context) {
     fun shutdown() {
         synchronized(lock) {
             pendingRequest = null
+            clearActiveLocked()
             try {
                 engine?.stop()
                 engine?.shutdown()
@@ -111,6 +130,12 @@ class TtsSpeaker(context: Context) {
                 state = SpeakerState.NOT_STARTED
             }
         }
+    }
+
+    // Must be called while holding [lock].
+    private fun clearActiveLocked() {
+        activeUtteranceId = null
+        activeFinished = null
     }
 
     // Must be called while holding [lock].
@@ -131,28 +156,31 @@ class TtsSpeaker(context: Context) {
     private fun handleInit(status: Int) {
         synchronized(lock) {
             val created: TextToSpeech? = engine
+            val waiting: SpeakRequest? = pendingRequest
+            pendingRequest = null
+
             if (status != TextToSpeech.SUCCESS || created == null) {
                 state = SpeakerState.FAILED
-                pendingRequest = null
                 try {
                     created?.shutdown()
                 } catch (e: Exception) {
                     NovaLogger.e(TAG, "Failed to clean up after init failure", e)
                 }
                 engine = null
-                val error = NovaError(ErrorCode.NOT_AVAILABLE, MSG_ENGINE_MISSING)
                 NovaLogger.w(TAG, "TextToSpeech init failed (status=$status)")
-                reportProblem(error)
+                reportProblem(NovaError(ErrorCode.NOT_AVAILABLE, MSG_ENGINE_MISSING))
+                waiting?.onFinished?.let { postFinished(it) }
                 return
             }
 
             created.setOnUtteranceProgressListener(progressListener)
             state = SpeakerState.READY
-            val request: SpeakRequest? = pendingRequest
-            pendingRequest = null
-            if (request != null) {
-                val result: NovaResult<Unit> = playLocked(created, request)
-                if (result is NovaResult.Failure) reportProblem(result.error)
+            if (waiting != null) {
+                val result: NovaResult<Unit> = playLocked(created, waiting)
+                if (result is NovaResult.Failure) {
+                    reportProblem(result.error)
+                    waiting.onFinished?.let { postFinished(it) }
+                }
             }
         }
     }
@@ -169,18 +197,23 @@ class TtsSpeaker(context: Context) {
             }
             readyEngine.setSpeechRate(request.rate)
             utteranceCounter += 1L
+            val utteranceId = "$UTTERANCE_PREFIX$utteranceCounter"
+            activeUtteranceId = utteranceId
+            activeFinished = request.onFinished
             val outcome: Int = readyEngine.speak(
                 request.text,
                 TextToSpeech.QUEUE_FLUSH,
                 null,
-                "$UTTERANCE_PREFIX$utteranceCounter"
+                utteranceId
             )
             if (outcome == TextToSpeech.ERROR) {
+                clearActiveLocked()
                 NovaResult.failure(ErrorCode.EXECUTION_FAILED, "কথা বলতে সমস্যা হয়েছে।")
             } else {
                 NovaResult.Success(Unit)
             }
         } catch (e: Exception) {
+            clearActiveLocked()
             NovaLogger.e(TAG, "Speak failed", e)
             NovaResult.failure(ErrorCode.EXECUTION_FAILED, "কথা বলতে সমস্যা হয়েছে।", e)
         }
@@ -198,24 +231,62 @@ class TtsSpeaker(context: Context) {
         }
     }
 
-    private val progressListener: UtteranceProgressListener = object : UtteranceProgressListener() {
-        override fun onStart(utteranceId: String?) = Unit
-
-        override fun onDone(utteranceId: String?) = Unit
-
-        @Deprecated("Deprecated in Java")
-        override fun onError(utteranceId: String?) {
-            handleUtteranceError(-1)
-        }
-
-        override fun onError(utteranceId: String?, errorCode: Int) {
-            handleUtteranceError(errorCode)
+    private fun postFinished(callback: () -> Unit) {
+        mainHandler.post {
+            try {
+                callback()
+            } catch (e: Exception) {
+                NovaLogger.e(TAG, "Finished callback threw an exception", e)
+            }
         }
     }
 
-    private fun handleUtteranceError(errorCode: Int) {
+    /** Runs the finished callback if [utteranceId] is the utterance we are waiting for. */
+    private fun finishUtterance(utteranceId: String?) {
+        var callback: (() -> Unit)? = null
+        synchronized(lock) {
+            if (utteranceId != null && utteranceId == activeUtteranceId) {
+                callback = activeFinished
+                clearActiveLocked()
+            }
+        }
+        callback?.let { postFinished(it) }
+    }
+
+    /** Forgets the waiting callback without running it (speech was stopped on purpose). */
+    private fun dropActive(utteranceId: String?) {
+        synchronized(lock) {
+            if (utteranceId != null && utteranceId == activeUtteranceId) {
+                clearActiveLocked()
+            }
+        }
+    }
+
+    private val progressListener: UtteranceProgressListener = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) = Unit
+
+        override fun onDone(utteranceId: String?) {
+            finishUtterance(utteranceId)
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onError(utteranceId: String?) {
+            handleUtteranceError(utteranceId, -1)
+        }
+
+        override fun onError(utteranceId: String?, errorCode: Int) {
+            handleUtteranceError(utteranceId, errorCode)
+        }
+
+        override fun onStop(utteranceId: String?, interrupted: Boolean) {
+            dropActive(utteranceId)
+        }
+    }
+
+    private fun handleUtteranceError(utteranceId: String?, errorCode: Int) {
         NovaLogger.w(TAG, "Utterance error (code=$errorCode)")
         reportProblem(NovaError(ErrorCode.EXECUTION_FAILED, "কথা বলতে সমস্যা হয়েছে।"))
+        finishUtterance(utteranceId)
     }
 
     private fun localeFor(language: Language): Locale = when (language) {

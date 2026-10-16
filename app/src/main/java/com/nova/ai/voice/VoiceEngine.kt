@@ -35,4 +35,16 @@ interface VoiceEngine {
 
     /** True while the app is speaking. */
     fun isSpeaking(): Boolean = false
+
+    /**
+     * Speaks [text] and calls [onFinished] on the main thread when the speech ends
+     * (finished, or failed later). If this call returns a failure, [onFinished] is NOT
+     * called. If the speech is stopped on purpose, [onFinished] is NOT called either.
+     * Default implementation has no completion tracking: it calls [onFinished] at once.
+     */
+    fun speakThen(text: String, language: Language, onFinished: () -> Unit): NovaResult<Unit> {
+        val result: NovaResult<Unit> = speak(text, language)
+        if (result is NovaResult.Success) onFinished()
+        return result
+    }
 }

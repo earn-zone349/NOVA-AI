@@ -14,7 +14,9 @@ data class AppSettingsState(
     val speechSpeed: SpeechSpeed = SpeechSpeed.NORMAL,
     val voiceReplyEnabled: Boolean = true,
     val onSpeechSpeedChange: (SpeechSpeed) -> Unit = { },
-    val onVoiceReplyChange: (Boolean) -> Unit = { }
+    val onVoiceReplyChange: (Boolean) -> Unit = { },
+    val continuousConversation: Boolean = true,
+    val onContinuousChange: (Boolean) -> Unit = { }
 )
 
 /** Gives every screen access to [AppSettingsState] without passing it manually. */

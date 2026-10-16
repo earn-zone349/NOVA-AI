@@ -5,7 +5,9 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -13,10 +15,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -31,9 +35,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import com.nova.ai.R
 import com.nova.ai.core.Language
-import com.nova.ai.core.NovaError
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
 import com.nova.ai.logging.NovaLogger
@@ -43,17 +49,21 @@ import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.theme.LocalAppSettings
 import com.nova.ai.voice.AndroidVoiceEngine
-import com.nova.ai.voice.VoiceEngine
-import com.nova.ai.voice.VoiceListener
+import com.nova.ai.voice.ConversationController
+import com.nova.ai.voice.ConversationEnd
+import com.nova.ai.voice.ConversationListener
+import com.nova.ai.voice.ConversationState
+import com.nova.ai.voice.SpokenReply
 import com.nova.ai.voice.toSpeechLanguage
 
 private const val TAG: String = "HomeScreen"
+private const val TRANSCRIPT_LIMIT: Int = 5
 
 /**
  * Home: voice button, command box, current status and running-task progress.
- * The mic button listens in the language chosen in AI Brain settings and
- * writes the recognized text into the command box. When voice reply is on,
- * the app also confirms by voice. Command understanding comes in Phase 11.
+ * The mic button starts a conversation: the app listens, confirms by voice,
+ * and (when continuous mode is on) listens again by itself until the user says
+ * stop, stays silent, or leaves the screen. Command understanding comes in Phase 11.
  */
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -62,79 +72,124 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val currentLanguage: AppLanguage by rememberUpdatedState(settings.language)
     val currentSpeed: SpeechSpeed by rememberUpdatedState(settings.speechSpeed)
     val replyEnabled: Boolean by rememberUpdatedState(settings.voiceReplyEnabled)
+    val continuousEnabled: Boolean by rememberUpdatedState(settings.continuousConversation)
 
     var commandText: String by rememberSaveable { mutableStateOf("") }
     var statusOverride: String by rememberSaveable { mutableStateOf("") }
-    var isListening: Boolean by remember { mutableStateOf(false) }
+    var conversationState: ConversationState by remember {
+        mutableStateOf(ConversationState.IDLE)
+    }
+    var commandCount: Int by remember { mutableStateOf(0) }
+    val transcript = remember { mutableStateListOf<String>() }
 
     val readyText: String = stringResource(R.string.home_status_ready)
     val idleText: String = stringResource(R.string.home_status_ready_voice)
     val receivedText: String = stringResource(R.string.home_status_command_received)
     val emptyText: String = stringResource(R.string.home_status_empty_command)
-    val processingText: String = stringResource(R.string.home_status_processing)
     val voiceDescription: String = stringResource(R.string.home_voice_button_desc)
     val stopDescription: String = stringResource(R.string.home_voice_stop_desc)
 
     // One voice engine per Home screen; released when the screen leaves.
-    val voiceEngine: VoiceEngine = remember {
+    val voiceEngine: AndroidVoiceEngine = remember {
         AndroidVoiceEngine(
             context = context,
             languageProvider = { currentLanguage },
             speechRateProvider = { currentSpeed.rate }
         )
     }
-    DisposableEffect(voiceEngine) {
-        onDispose { voiceEngine.shutdown() }
+
+    // Conversation events arrive on the main thread, so updating UI state here is safe.
+    val conversation: ConversationController = remember {
+        ConversationController(
+            engine = voiceEngine,
+            listener = object : ConversationListener {
+                override fun onStateChanged(state: ConversationState) {
+                    conversationState = state
+                    when (state) {
+                        ConversationState.LISTENING ->
+                            statusOverride = listeningStatus(context, commandCount)
+                        ConversationState.SPEAKING ->
+                            statusOverride = context.getString(R.string.home_status_speaking)
+                        ConversationState.WAITING ->
+                            statusOverride = context.getString(R.string.home_status_next_turn)
+                        ConversationState.IDLE -> Unit
+                    }
+                }
+
+                override fun onPartialText(text: String) {
+                    commandText = text
+                }
+
+                override fun onCommand(command: VoiceCommand) {
+                    commandCount += 1
+                    commandText = command.rawText
+                    statusOverride = context.getString(R.string.home_status_heard, command.rawText)
+                    transcript.add("$commandCount. ${command.rawText}")
+                    while (transcript.size > TRANSCRIPT_LIMIT) transcript.removeAt(0)
+                }
+
+                override fun onEnded(reason: ConversationEnd) {
+                    when (reason) {
+                        is ConversationEnd.UserStopped ->
+                            statusOverride = context.getString(R.string.home_status_ended_user)
+                        is ConversationEnd.StopPhrase -> {
+                            statusOverride = context.getString(R.string.home_status_ended_phrase)
+                            if (replyEnabled) {
+                                val english: Boolean = currentLanguage == AppLanguage.ENGLISH
+                                val ackRes: Int = if (english) {
+                                    R.string.home_voice_stop_ack_en
+                                } else {
+                                    R.string.home_voice_stop_ack
+                                }
+                                voiceEngine.speak(
+                                    context.getString(ackRes),
+                                    currentLanguage.toSpeechLanguage()
+                                )
+                            }
+                        }
+                        is ConversationEnd.SilenceTimeout ->
+                            statusOverride = context.getString(R.string.home_status_ended_silence)
+                        is ConversationEnd.SingleCompleted ->
+                            statusOverride =
+                                context.getString(R.string.home_status_heard, commandText)
+                        is ConversationEnd.Failed ->
+                            statusOverride = context.getString(
+                                R.string.home_voice_error,
+                                reason.error.message
+                            )
+                    }
+                }
+            },
+            continuousProvider = { continuousEnabled },
+            replyProvider = { command ->
+                if (replyEnabled) buildReply(context, command, currentLanguage) else null
+            }
+        )
     }
 
-    // Callbacks arrive on the main thread, so updating UI state here is safe.
-    val voiceListener: VoiceListener = remember {
-        object : VoiceListener {
-            override fun onListeningStarted() {
-                isListening = true
-                statusOverride = context.getString(R.string.home_status_listening)
-            }
-
-            override fun onPartialText(text: String) {
-                commandText = text
-            }
-
-            override fun onFinalCommand(command: VoiceCommand) {
-                isListening = false
-                commandText = command.rawText
-                statusOverride = context.getString(R.string.home_status_heard, command.rawText)
-
-                if (replyEnabled) {
-                    val isEnglish: Boolean = command.language == Language.ENGLISH
-                    val replyRes: Int =
-                        if (isEnglish) R.string.home_voice_ack_en else R.string.home_voice_ack
-                    val spokenLanguage: Language =
-                        if (command.language == Language.UNKNOWN) {
-                            currentLanguage.toSpeechLanguage()
-                        } else {
-                            command.language
-                        }
-                    voiceEngine.speak(context.getString(replyRes, command.rawText), spokenLanguage)
-                }
-            }
-
-            override fun onError(error: NovaError) {
-                isListening = false
-                statusOverride = context.getString(R.string.home_voice_error, error.message)
-            }
+    // Release everything when the screen leaves, and close the microphone
+    // whenever the app goes to the background.
+    val lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
+    DisposableEffect(lifecycleOwner, conversation) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) conversation.stop()
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose {
+            lifecycleOwner?.lifecycle?.removeObserver(observer)
+            conversation.shutdown()
+            voiceEngine.shutdown()
         }
     }
 
-    fun startVoice() {
-        when (val result: NovaResult<Unit> = voiceEngine.startListening(voiceListener)) {
-            is NovaResult.Success -> {
-                isListening = true
-                statusOverride = context.getString(R.string.home_status_listening)
-            }
+    fun startConversation() {
+        commandCount = 0
+        transcript.clear()
+        when (val result: NovaResult<Unit> = conversation.start()) {
+            is NovaResult.Success -> Unit
             is NovaResult.Failure -> {
-                isListening = false
                 statusOverride = context.getString(R.string.home_voice_error, result.error.message)
-                NovaLogger.w(TAG, "Voice start failed: ${result.error.message}")
+                NovaLogger.w(TAG, "Conversation start failed: ${result.error.message}")
             }
         }
     }
@@ -143,12 +198,13 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         ActivityResultContracts.RequestPermission()
     ) { granted: Boolean ->
         if (granted) {
-            startVoice()
+            startConversation()
         } else {
             statusOverride = context.getString(R.string.home_mic_permission_denied)
         }
     }
 
+    val sessionActive: Boolean = conversationState != ConversationState.IDLE
     val currentStatus: String =
         if (statusOverride.isEmpty()) "$readyText\n$idleText" else statusOverride
 
@@ -161,19 +217,17 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
-            val buttonDescription: String = if (isListening) stopDescription else voiceDescription
+            val buttonDescription: String = if (sessionActive) stopDescription else voiceDescription
             Button(
                 onClick = {
-                    if (isListening) {
-                        voiceEngine.stopListening()
-                        isListening = false
-                        statusOverride = processingText
+                    if (sessionActive) {
+                        conversation.stop()
                     } else {
                         val micGranted: Boolean = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.RECORD_AUDIO
                         ) == PackageManager.PERMISSION_GRANTED
                         if (micGranted) {
-                            startVoice()
+                            startConversation()
                         } else {
                             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                         }
@@ -181,7 +235,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 },
                 shape = CircleShape,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isListening) {
+                    containerColor = if (sessionActive) {
                         MaterialTheme.colorScheme.error
                     } else {
                         MaterialTheme.colorScheme.primary
@@ -191,9 +245,28 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     .size(120.dp)
                     .semantics { contentDescription = buttonDescription }
             ) {
-                Text(text = if (isListening) "⏹️" else "🎙️", fontSize = 40.sp)
+                Text(text = if (sessionActive) "⏹️" else "🎙️", fontSize = 40.sp)
             }
         }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.home_continuous_label),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Switch(
+                checked = settings.continuousConversation,
+                onCheckedChange = settings.onContinuousChange
+            )
+        }
+        Text(
+            text = stringResource(R.string.home_continuous_hint),
+            style = MaterialTheme.typography.bodySmall
+        )
 
         NovaInfoCard(
             title = stringResource(R.string.home_status_label),
@@ -217,9 +290,36 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             Text(stringResource(R.string.home_send))
         }
 
+        if (transcript.isNotEmpty()) {
+            NovaInfoCard(
+                title = stringResource(R.string.home_transcript_title),
+                body = transcript.joinToString("\n")
+            )
+        }
+
         NovaInfoCard(
             title = stringResource(R.string.home_progress_title),
             body = stringResource(R.string.home_progress_none)
         )
     }
+}
+
+/** Status line while listening; shows how many commands this conversation has had. */
+private fun listeningStatus(context: Context, count: Int): String =
+    if (count == 0) {
+        context.getString(R.string.home_status_listening)
+    } else {
+        context.getString(R.string.home_status_listening_count, count)
+    }
+
+/** Builds the spoken confirmation for [command] in the language it was spoken in. */
+private fun buildReply(context: Context, command: VoiceCommand, fallback: AppLanguage): SpokenReply {
+    val english: Boolean = command.language == Language.ENGLISH
+    val replyRes: Int = if (english) R.string.home_voice_ack_en else R.string.home_voice_ack
+    val spoken: Language = if (command.language == Language.UNKNOWN) {
+        fallback.toSpeechLanguage()
+    } else {
+        command.language
+    }
+    return SpokenReply(context.getString(replyRes, command.rawText), spoken)
 }

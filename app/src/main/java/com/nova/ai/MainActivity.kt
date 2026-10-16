@@ -51,6 +51,9 @@ private fun NovaRoot(repository: SettingsRepository) {
     var language: AppLanguage by remember { mutableStateOf(repository.getLanguage()) }
     var speechSpeed: SpeechSpeed by remember { mutableStateOf(repository.getSpeechSpeed()) }
     var voiceReplyEnabled: Boolean by remember { mutableStateOf(repository.isVoiceReplyEnabled()) }
+    var continuousConversation: Boolean by remember {
+        mutableStateOf(repository.isContinuousConversationEnabled())
+    }
     var onboardingDone: Boolean by remember { mutableStateOf(repository.isOnboardingDone()) }
 
     val settingsState = AppSettingsState(
@@ -73,6 +76,11 @@ private fun NovaRoot(repository: SettingsRepository) {
         onVoiceReplyChange = { enabled ->
             voiceReplyEnabled = enabled
             repository.setVoiceReplyEnabled(enabled)
+        },
+        continuousConversation = continuousConversation,
+        onContinuousChange = { enabled ->
+            continuousConversation = enabled
+            repository.setContinuousConversationEnabled(enabled)
         }
     )
 
