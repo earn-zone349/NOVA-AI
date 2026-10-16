@@ -29,4 +29,10 @@ interface VoiceEngine {
 
     /** Releases microphone and speech resources. */
     fun shutdown()
+
+    /** Stops any speech that is currently playing. */
+    fun stopSpeaking() {}
+
+    /** True while the app is speaking. */
+    fun isSpeaking(): Boolean = false
 }

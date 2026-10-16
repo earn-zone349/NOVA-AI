@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SettingsRepository
+import com.nova.ai.settings.SpeechSpeed
 import com.nova.ai.settings.ThemeMode
 import com.nova.ai.ui.navigation.NovaMainScaffold
 import com.nova.ai.ui.screens.OnboardingScreen
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
 private fun NovaRoot(repository: SettingsRepository) {
     var themeMode: ThemeMode by remember { mutableStateOf(repository.getThemeMode()) }
     var language: AppLanguage by remember { mutableStateOf(repository.getLanguage()) }
+    var speechSpeed: SpeechSpeed by remember { mutableStateOf(repository.getSpeechSpeed()) }
+    var voiceReplyEnabled: Boolean by remember { mutableStateOf(repository.isVoiceReplyEnabled()) }
     var onboardingDone: Boolean by remember { mutableStateOf(repository.isOnboardingDone()) }
 
     val settingsState = AppSettingsState(
@@ -60,6 +63,16 @@ private fun NovaRoot(repository: SettingsRepository) {
         onLanguageChange = { newLanguage ->
             language = newLanguage
             repository.setLanguage(newLanguage)
+        },
+        speechSpeed = speechSpeed,
+        voiceReplyEnabled = voiceReplyEnabled,
+        onSpeechSpeedChange = { newSpeed ->
+            speechSpeed = newSpeed
+            repository.setSpeechSpeed(newSpeed)
+        },
+        onVoiceReplyChange = { enabled ->
+            voiceReplyEnabled = enabled
+            repository.setVoiceReplyEnabled(enabled)
         }
     )
 

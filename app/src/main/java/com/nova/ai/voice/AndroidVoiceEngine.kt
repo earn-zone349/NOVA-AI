@@ -19,23 +19,31 @@ import com.nova.ai.logging.NovaLogger
 import com.nova.ai.settings.AppLanguage
 
 /**
- * Voice input using Android's built-in speech recognizer.
- * Voice output (speaking) is added in Phase 7.
+ * Voice input (Android speech recognizer) and voice output ([TtsSpeaker]).
  *
- * Must be used from the main thread (a SpeechRecognizer requirement).
- * [languageProvider] is read each time listening starts, so a language
- * change in settings takes effect immediately.
+ * Listening must be used from the main thread (a SpeechRecognizer requirement).
+ * [languageProvider] is read each time listening starts, and [speechRateProvider]
+ * each time the app speaks, so settings changes apply immediately.
  */
 class AndroidVoiceEngine(
     context: Context,
-    private val languageProvider: () -> AppLanguage
+    private val languageProvider: () -> AppLanguage,
+    private val speechRateProvider: () -> Float = { 1.0f }
 ) : VoiceEngine {
 
     private val appContext: Context = context.applicationContext
     private var recognizer: SpeechRecognizer? = null
+    private var speaker: TtsSpeaker? = null
+    private var speechProblemListener: ((NovaError) -> Unit)? = null
 
     @Volatile
     private var listening: Boolean = false
+
+    /** Receives problems that appear after speaking started (main thread). */
+    fun setSpeechProblemListener(listener: ((NovaError) -> Unit)?) {
+        speechProblemListener = listener
+        speaker?.setProblemListener(listener)
+    }
 
     override fun startListening(listener: VoiceListener): NovaResult<Unit> {
         if (Looper.myLooper() != Looper.getMainLooper()) {
@@ -53,6 +61,9 @@ class AndroidVoiceEngine(
         if (!micGranted) {
             return NovaResult.failure(ErrorCode.PERMISSION_DENIED, "মাইক্রোফোনের অনুমতি নেই।")
         }
+
+        // Stop the app's own voice first, so the microphone does not hear it.
+        stopSpeaking()
 
         return try {
             releaseRecognizer()
@@ -81,14 +92,46 @@ class AndroidVoiceEngine(
         }
     }
 
-    override fun speak(text: String, language: Language): NovaResult<Unit> =
-        NovaResult.failure(ErrorCode.NOT_AVAILABLE, "ভয়েস আউটপুট P7-এ যোগ হবে।")
+    override fun speak(text: String, language: Language): NovaResult<Unit> {
+        return try {
+            obtainSpeaker().speak(text, language, speechRateProvider())
+        } catch (e: Exception) {
+            NovaLogger.e(TAG, "Speak request failed", e)
+            NovaResult.failure(ErrorCode.EXECUTION_FAILED, "কথা বলতে সমস্যা হয়েছে।", e)
+        }
+    }
+
+    override fun stopSpeaking() {
+        try {
+            speaker?.stop()
+        } catch (e: Exception) {
+            NovaLogger.e(TAG, "Failed to stop speaking", e)
+        }
+    }
+
+    override fun isSpeaking(): Boolean = speaker?.isSpeaking() == true
 
     override fun isListening(): Boolean = listening
 
     override fun shutdown() {
         listening = false
         releaseRecognizer()
+        try {
+            speaker?.shutdown()
+        } catch (e: Exception) {
+            NovaLogger.e(TAG, "Failed to shut down speaker", e)
+        } finally {
+            speaker = null
+        }
+    }
+
+    private fun obtainSpeaker(): TtsSpeaker {
+        val existing: TtsSpeaker? = speaker
+        if (existing != null) return existing
+        val created = TtsSpeaker(appContext)
+        created.setProblemListener(speechProblemListener)
+        speaker = created
+        return created
     }
 
     private fun releaseRecognizer() {

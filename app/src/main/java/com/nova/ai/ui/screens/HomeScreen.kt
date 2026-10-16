@@ -32,31 +32,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.nova.ai.R
+import com.nova.ai.core.Language
 import com.nova.ai.core.NovaError
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
 import com.nova.ai.logging.NovaLogger
 import com.nova.ai.settings.AppLanguage
+import com.nova.ai.settings.SpeechSpeed
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.theme.LocalAppSettings
 import com.nova.ai.voice.AndroidVoiceEngine
 import com.nova.ai.voice.VoiceEngine
 import com.nova.ai.voice.VoiceListener
+import com.nova.ai.voice.toSpeechLanguage
 
 private const val TAG: String = "HomeScreen"
 
 /**
  * Home: voice button, command box, current status and running-task progress.
  * The mic button listens in the language chosen in AI Brain settings and
- * writes the recognized text into the command box. Command understanding
- * is connected in Phase 11.
+ * writes the recognized text into the command box. When voice reply is on,
+ * the app also confirms by voice. Command understanding comes in Phase 11.
  */
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
     val settings = LocalAppSettings.current
     val currentLanguage: AppLanguage by rememberUpdatedState(settings.language)
+    val currentSpeed: SpeechSpeed by rememberUpdatedState(settings.speechSpeed)
+    val replyEnabled: Boolean by rememberUpdatedState(settings.voiceReplyEnabled)
 
     var commandText: String by rememberSaveable { mutableStateOf("") }
     var statusOverride: String by rememberSaveable { mutableStateOf("") }
@@ -71,7 +76,13 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val stopDescription: String = stringResource(R.string.home_voice_stop_desc)
 
     // One voice engine per Home screen; released when the screen leaves.
-    val voiceEngine: VoiceEngine = remember { AndroidVoiceEngine(context) { currentLanguage } }
+    val voiceEngine: VoiceEngine = remember {
+        AndroidVoiceEngine(
+            context = context,
+            languageProvider = { currentLanguage },
+            speechRateProvider = { currentSpeed.rate }
+        )
+    }
     DisposableEffect(voiceEngine) {
         onDispose { voiceEngine.shutdown() }
     }
@@ -92,6 +103,19 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 isListening = false
                 commandText = command.rawText
                 statusOverride = context.getString(R.string.home_status_heard, command.rawText)
+
+                if (replyEnabled) {
+                    val isEnglish: Boolean = command.language == Language.ENGLISH
+                    val replyRes: Int =
+                        if (isEnglish) R.string.home_voice_ack_en else R.string.home_voice_ack
+                    val spokenLanguage: Language =
+                        if (command.language == Language.UNKNOWN) {
+                            currentLanguage.toSpeechLanguage()
+                        } else {
+                            command.language
+                        }
+                    voiceEngine.speak(context.getString(replyRes, command.rawText), spokenLanguage)
+                }
             }
 
             override fun onError(error: NovaError) {

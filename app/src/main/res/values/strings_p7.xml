@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_voice_ack">ঠিক আছে, শুনেছি: %1$s</string>
+    <string name="home_voice_ack_en">Okay, I heard: %1$s</string>
+
+    <string name="brain_voice_title">ভয়েস উত্তর</string>
+    <string name="brain_voice_reply_label">অ্যাপ মুখে উত্তর দেবে</string>
+    <string name="brain_voice_speed_title">কথা বলার গতি</string>
+    <string name="settings_speed_slow">ধীরে</string>
+    <string name="settings_speed_normal">স্বাভাবিক</string>
+    <string name="settings_speed_fast">দ্রুত</string>
+    <string name="brain_voice_test_button">ভয়েস পরীক্ষা করো</string>
+    <string name="brain_voice_test_bn">আমি নোভা, তোমার ফোন এজেন্ট। আমি তোমার কথা শুনছি।</string>
+    <string name="brain_voice_test_en">I am Nova, your phone agent. I am listening.</string>
+    <string name="brain_voice_problem">ভয়েস সমস্যা: %1$s</string>
+</resources>
