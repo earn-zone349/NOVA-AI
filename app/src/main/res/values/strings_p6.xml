@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_status_ready_voice">প্রস্তুত। মাইক বাটন চেপে বলো।</string>
+    <string name="home_status_listening">শুনছি... এখন বলো।</string>
+    <string name="home_status_processing">প্রক্রিয়া করছি...</string>
+    <string name="home_status_heard">শুনেছি: %1$s</string>
+    <string name="home_mic_permission_denied">মাইক্রোফোনের অনুমতি ছাড়া ভয়েস কমান্ড চলবে না। অনুমতি দিয়ে আবার চেষ্টা করো।</string>
+    <string name="home_voice_error">ভয়েস সমস্যা: %1$s</string>
+    <string name="home_voice_stop_desc">শোনা বন্ধ করো</string>
+</resources>
