@@ -113,7 +113,7 @@ class AndroidVoiceEngine(
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, appContext.packageName)
             if (language == AppLanguage.MIXED) {
-                putExtra(RecognizerIntent.EXTRA_ADDITIONAL_LANGUAGES, arrayOf(TAG_ENGLISH))
+                putExtra("android.speech.extra.ADDITIONAL_LANGUAGES", arrayOf(TAG_ENGLISH))
             }
         }
     }
