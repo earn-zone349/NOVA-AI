@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="insight_title">বোঝা কমান্ড</string>
+    <string name="insight_normalized">সাজানো রূপ: %1$s</string>
+    <string name="insight_apps">চেনা অ্যাপ: %1$s</string>
+    <string name="insight_language">ভাষা: %1$s</string>
+    <string name="insight_lang_bangla">বাংলা</string>
+    <string name="insight_lang_english">English</string>
+    <string name="insight_lang_mixed">মিশ্র (বাংলা + English)</string>
+    <string name="insight_lang_unknown">অজানা</string>
+</resources>

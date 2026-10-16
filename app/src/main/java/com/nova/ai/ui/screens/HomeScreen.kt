@@ -47,6 +47,7 @@ import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SpeechSpeed
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
+import com.nova.ai.ui.components.CommandInsightCard
 import com.nova.ai.ui.theme.LocalAppSettings
 import com.nova.ai.voice.AndroidVoiceEngine
 import com.nova.ai.voice.ConversationController
@@ -289,6 +290,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         ) {
             Text(stringResource(R.string.home_send))
         }
+
+        CommandInsightCard(text = commandText)
 
         if (transcript.isNotEmpty()) {
             NovaInfoCard(
