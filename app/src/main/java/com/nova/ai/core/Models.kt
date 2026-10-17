@@ -19,6 +19,8 @@ enum class IntentType {
     SYSTEM_ACTION,
     SET_ALARM,
     MEDIA_CONTROL,
+    NAVIGATE,
+    CAPTURE_MEDIA,
     UNKNOWN
 }
 

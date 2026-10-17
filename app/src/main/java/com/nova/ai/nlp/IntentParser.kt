@@ -42,6 +42,7 @@ object IntentParser {
         val parsed: NovaIntent = parseAlarm(view)
             ?: parseSystem(view)
             ?: parseCall(view)
+            ?: ExtraCommandParser.parse(view)
             ?: parseSearch(view)
             ?: parseMessage(view)
             ?: parseMedia(view)

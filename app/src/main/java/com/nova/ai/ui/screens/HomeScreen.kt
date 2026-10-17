@@ -44,6 +44,8 @@ import com.nova.ai.apps.AppCommandController
 import com.nova.ai.system.SystemCommandController
 import com.nova.ai.contacts.ContactCommandController
 import com.nova.ai.time.TimeCommandController
+import com.nova.ai.media.MediaCommandController
+import com.nova.ai.ui.components.MediaActionCard
 import com.nova.ai.ui.components.TimeActionCard
 import com.nova.ai.ui.components.ContactActionCard
 import com.nova.ai.ui.components.SystemActionCard
@@ -124,6 +126,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     // Sets alarms, timers and reminders in the phone's clock app.
     val timeController: TimeCommandController = remember { TimeCommandController(context) }
 
+    // Runs music control, searches, navigation and camera commands.
+    val mediaController: MediaCommandController = remember { MediaCommandController(context) }
+
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
         ConversationController(
@@ -156,6 +161,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     systemController.handleCommand(command.rawText)
                     contactController.handleCommand(command.rawText)
                     timeController.handleCommand(command.rawText)
+                    mediaController.handleCommand(command.rawText)
                 }
 
                 override fun onEnded(reason: ConversationEnd) {
@@ -322,6 +328,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     systemController.handleCommand(commandText)
                     contactController.handleCommand(commandText)
                     timeController.handleCommand(commandText)
+                    mediaController.handleCommand(commandText)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -336,6 +343,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         ContactActionCard(controller = contactController)
 
         TimeActionCard(controller = timeController)
+
+        MediaActionCard(controller = mediaController)
 
         CommandInsightCard(text = commandText)
 

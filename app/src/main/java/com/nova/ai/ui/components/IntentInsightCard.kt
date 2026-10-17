@@ -89,6 +89,8 @@ private fun typeLabelRes(type: IntentType): Int = when (type) {
     IntentType.SYSTEM_ACTION -> R.string.intent_type_system_action
     IntentType.SET_ALARM -> R.string.intent_type_set_alarm
     IntentType.MEDIA_CONTROL -> R.string.intent_type_media_control
+    IntentType.NAVIGATE -> R.string.intent_type_navigate
+    IntentType.CAPTURE_MEDIA -> R.string.intent_type_capture
     IntentType.UNKNOWN -> R.string.intent_type_unknown
 }
 
@@ -149,6 +151,8 @@ private fun valueLabel(key: String, value: String): String {
             IntentMode.ALARM -> R.string.intent_value_alarm
             IntentMode.TIMER -> R.string.intent_value_timer
             IntentMode.REMINDER -> R.string.intent_value_reminder
+            IntentMode.PHOTO -> R.string.intent_value_photo
+            IntentMode.VIDEO -> R.string.intent_value_video
             else -> null
         }
         IntentEntity.PERIOD -> when (value) {

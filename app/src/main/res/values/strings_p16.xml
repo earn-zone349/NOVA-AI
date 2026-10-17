@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intent_type_navigate">উদ্দেশ্য: পথ দেখানো (নেভিগেশন)</string>
+    <string name="intent_type_capture">উদ্দেশ্য: ছবি বা ভিডিও তোলা</string>
+    <string name="intent_value_photo">ছবি তোলা (ক্যামেরা)</string>
+    <string name="intent_value_video">ভিডিও রেকর্ড</string>
+
+    <string name="media_title">গান, সার্চ ও ক্যামেরা</string>
+    <string name="media_paused">গান বা ভিডিও থামালাম।</string>
+    <string name="media_next">পরের গানে গেলাম।</string>
+    <string name="media_previous">আগের গানে গেলাম।</string>
+    <string name="media_nothing_playing">এখন কোনো গান বা ভিডিও চলছে না।</string>
+    <string name="media_resume">চালানোর অনুরোধ পাঠিয়েছি। কিছু না চললে গানের অ্যাপ খুলে দেখো।</string>
+    <string name="media_play_query">\"%1$s\" চালানোর চেষ্টা করছি। অ্যাপ নিজে না চালালে প্লে বাটন তুমি চাপো।</string>
+    <string name="media_youtube_search">ইউটিউবে খুঁজছি: %1$s</string>
+    <string name="media_web_search">গুগলে খুঁজছি: %1$s</string>
+    <string name="media_maps_search">ম্যাপে খুঁজছি: %1$s</string>
+    <string name="media_play_store_search">প্লে স্টোরে খুঁজছি: %1$s</string>
+    <string name="media_navigate">\"%1$s\" যাওয়ার পথ দেখাচ্ছি।</string>
+    <string name="media_need_query">কী খুঁজব? যেমন: ক্রোমে গাড়ির দাম সার্চ করো।</string>
+    <string name="media_need_destination">কোথায় যাবে? যেমন: মিরপুর যাওয়ার রাস্তা দেখাও।</string>
+    <string name="media_app_search_later">অ্যাপের ভেতরে সার্চ (যেমন Facebook বা TikTok) পরের ফেজে আসছে।</string>
+    <string name="media_camera_photo">ক্যামেরা খুলেছি। ছবি তুলতে শাটার বাটন চাপো। (Accessibility আসার পর নোভা নিজে চাপবে।)</string>
+    <string name="media_camera_video">ভিডিও ক্যামেরা খুলেছি। রেকর্ড বাটন চাপো। (Accessibility আসার পর নোভা নিজে চাপবে।)</string>
+    <string name="media_unknown">এই কাজটি বুঝিনি। আরও পরিষ্কার করে বলো।</string>
+    <string name="media_failed">সমস্যা: %1$s</string>
+</resources>

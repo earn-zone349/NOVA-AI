@@ -49,6 +49,8 @@ object IntentMode {
     const val ALARM: String = "alarm"
     const val TIMER: String = "timer"
     const val REMINDER: String = "reminder"
+    const val PHOTO: String = "photo"
+    const val VIDEO: String = "video"
 }
 
 /** Values of the [IntentEntity.PERIOD] detail. */
