@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sys_title">সিস্টেম কাজ</string>
+    <string name="sys_unknown">এই কাজটি এখনো বুঝিনি। আরও পরিষ্কার করে বলো।</string>
+    <string name="sys_unknown_error">অজানা সমস্যা</string>
+    <string name="sys_failed">সিস্টেম কাজে সমস্যা: %1$s</string>
+
+    <string name="sys_flash_on">টর্চ চালু করেছি।</string>
+    <string name="sys_flash_off">টর্চ বন্ধ করেছি।</string>
+    <string name="sys_flash_none">এই ফোনে ফ্ল্যাশলাইট নেই।</string>
+
+    <string name="sys_volume_set">ভলিউম %1$d%% করেছি।</string>
+    <string name="sys_volume_muted">ভলিউম বন্ধ করেছি (মিউট)। আবার চালাতে বলো: ভলিউম চালু করো।</string>
+    <string name="sys_volume_hint">ভলিউম বাড়াতে, কমাতে বা শতাংশ বলো। যেমন: ভলিউম ৫০ করো।</string>
+
+    <string name="sys_brightness_set">ব্রাইটনেস %1$d%% করেছি।</string>
+    <string name="sys_brightness_hint">ব্রাইটনেস বাড়াতে, কমাতে বা শতাংশ বলো। যেমন: ব্রাইটনেস ৫০ করো।</string>
+    <string name="sys_brightness_permission">ব্রাইটনেস বদলাতে একটি বিশেষ অনুমতি লাগে। নিচের বাটন চেপে নোভাকে অনুমতি দাও, তারপর আবার বলো।</string>
+    <string name="sys_brightness_permission_button">অনুমতির স্ক্রিন খোলো</string>
+    <string name="sys_brightness_permission_opened">অনুমতির স্ক্রিন খুলেছি। নোভার পাশের সুইচটি চালু করে ফিরে এসো।</string>
+
+    <string name="sys_wifi_guided">ওয়াইফাইয়ের প্যানেল খুলেছি। Android নিয়ম অনুযায়ী অ্যাপ নিজে ওয়াইফাই চালু বা বন্ধ করতে পারে না, তাই সুইচটি তুমি চাপো।</string>
+    <string name="sys_wifi_settings">ওয়াইফাই সেটিংস খুলেছি।</string>
+    <string name="sys_bt_guided">ব্লুটুথ সেটিংস খুলেছি। Android নিয়ম অনুযায়ী অ্যাপ নিজে ব্লুটুথ চালু বা বন্ধ করতে পারে না, তাই সুইচটি তুমি চাপো।</string>
+    <string name="sys_bt_settings">ব্লুটুথ সেটিংস খুলেছি।</string>
+</resources>

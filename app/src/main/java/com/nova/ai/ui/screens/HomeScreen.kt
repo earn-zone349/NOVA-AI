@@ -41,6 +41,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.nova.ai.R
 import com.nova.ai.apps.AppCommandController
+import com.nova.ai.system.SystemCommandController
+import com.nova.ai.ui.components.SystemActionCard
 import com.nova.ai.core.Language
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
@@ -109,6 +111,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     // Opens apps from commands, using the user's app library.
     val appController: AppCommandController = remember { AppCommandController(context, scope) }
 
+    // Runs system commands: torch, volume, brightness, Wi-Fi and Bluetooth screens.
+    val systemController: SystemCommandController = remember { SystemCommandController(context) }
+
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
         ConversationController(
@@ -138,6 +143,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     transcript.add("$commandCount. ${command.rawText}")
                     while (transcript.size > TRANSCRIPT_LIMIT) transcript.removeAt(0)
                     appController.handleCommand(command.rawText)
+                    systemController.handleCommand(command.rawText)
                 }
 
                 override fun onEnded(reason: ConversationEnd) {
@@ -191,6 +197,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             lifecycleOwner?.lifecycle?.removeObserver(observer)
             conversation.shutdown()
             voiceEngine.shutdown()
+            systemController.release()
         }
     }
 
@@ -300,6 +307,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 } else {
                     statusOverride = receivedText
                     appController.handleCommand(commandText)
+                    systemController.handleCommand(commandText)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -308,6 +316,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
 
         AppActionCard(controller = appController)
+
+        SystemActionCard(controller = systemController)
 
         CommandInsightCard(text = commandText)
 
