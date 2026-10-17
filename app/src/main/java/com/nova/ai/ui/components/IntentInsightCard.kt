@@ -142,6 +142,7 @@ private fun valueLabel(key: String, value: String): String {
             SystemTarget.FLASHLIGHT -> R.string.intent_value_flashlight
             SystemTarget.VOLUME -> R.string.intent_value_volume
             SystemTarget.BRIGHTNESS -> R.string.intent_value_brightness
+            SystemTarget.MOBILE_DATA -> R.string.intent_value_mobile_data
             else -> null
         }
         IntentEntity.MODE -> when (value) {

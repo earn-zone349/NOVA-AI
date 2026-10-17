@@ -39,6 +39,7 @@ class SystemActionExecutor(context: Context) {
                 SystemTarget.BRIGHTNESS -> brightness(action, value)
                 SystemTarget.WIFI -> wifi(action)
                 SystemTarget.BLUETOOTH -> bluetooth(action)
+                SystemTarget.MOBILE_DATA -> mobileData(action)
                 else -> hint(text(R.string.sys_unknown))
             }
         } catch (e: Exception) {
@@ -145,6 +146,17 @@ class SystemActionExecutor(context: Context) {
     private fun text(@StringRes id: Int, vararg args: Any): String = appContext.getString(id, *args)
 
     private fun done(message: String) = SystemActionOutcome(OutcomeKind.DONE, message)
+
+    private fun mobileData(action: String?): SystemActionOutcome =
+        when (val result: NovaResult<Unit> = settingsOpener.openMobileData()) {
+            is NovaResult.Success ->
+                if (action == IntentAction.ON || action == IntentAction.OFF) {
+                    SystemActionOutcome(OutcomeKind.GUIDED, text(R.string.sys_data_guided))
+                } else {
+                    done(text(R.string.sys_data_settings))
+                }
+            is NovaResult.Failure -> failed(result.error.message)
+        }
     private fun hint(message: String) = SystemActionOutcome(OutcomeKind.HINT, message)
     private fun failed(message: String) = SystemActionOutcome(OutcomeKind.FAILED, message)
 

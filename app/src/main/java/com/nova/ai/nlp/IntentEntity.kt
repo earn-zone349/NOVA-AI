@@ -41,6 +41,7 @@ object SystemTarget {
     const val FLASHLIGHT: String = "flashlight"
     const val VOLUME: String = "volume"
     const val BRIGHTNESS: String = "brightness"
+    const val MOBILE_DATA: String = "mobile_data"
 }
 
 /** Values of the [IntentEntity.MODE] detail for time based commands. */

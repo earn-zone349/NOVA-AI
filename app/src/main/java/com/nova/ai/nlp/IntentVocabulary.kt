@@ -76,7 +76,8 @@ internal object IntentVocabulary {
         SystemTarget.VOLUME to listOf(
             "volume", "ভলিউম", "আওয়াজ", "mute", "মিউট", "সাইলেন্ট"
         ),
-        SystemTarget.BRIGHTNESS to listOf("brightness", "ব্রাইটনেস", "উজ্জ্বলতা")
+        SystemTarget.BRIGHTNESS to listOf("brightness", "ব্রাইটনেস", "উজ্জ্বলতা"),
+        SystemTarget.MOBILE_DATA to listOf("mobile data", "মোবাইল ডেটা", "ডেটা", "ডাটা", "data")
     )
     val ON_WORDS: Set<String> = setOf(
         "চালু", "অন", "on", "enable", "জ্বালাও", "জ্বালো", "জ্বেলে", "জ্বালান"

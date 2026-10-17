@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="intent_value_mobile_data">মোবাইল ডেটা</string>
+    <string name="sys_data_guided">মোবাইল ডেটার প্যানেল খুলেছি। Android নিয়ম অনুযায়ী অ্যাপ নিজে ডেটা চালু বা বন্ধ করতে পারে না, তাই সুইচটি তুমি চাপো।</string>
+    <string name="sys_data_settings">মোবাইল ডেটার সেটিংস খুলেছি।</string>
+
+    <string name="contact_title">কল ও মেসেজ</string>
+    <string name="contact_permission_needed">নাম দিয়ে কল বা মেসেজ করতে কন্টাক্ট পড়ার অনুমতি লাগে। নম্বর বলে কল করতে এই অনুমতি লাগে না।</string>
+    <string name="contact_permission_button">কন্টাক্টের অনুমতি দাও</string>
+    <string name="contact_permission_denied">কন্টাক্টের অনুমতি ছাড়া নাম দিয়ে খোঁজা যাবে না। নম্বর বলে চেষ্টা করো।</string>
+    <string name="contact_not_found">\"%1$s\" নামে কোনো কন্টাক্ট পেলাম না। নামটি অন্যভাবে বলো বা নম্বর বলো।</string>
+    <string name="contact_choose">\"%1$s\": কোন কন্টাক্ট?</string>
+    <string name="contact_choose_number">%1$s: কোন নম্বর?</string>
+    <string name="contact_confirm_call">কল করব: %1$s (%2$s)?</string>
+    <string name="contact_confirm_call_number">কল করব: %1$s?</string>
+    <string name="contact_call_button">কল করো</string>
+    <string name="contact_dial_button">ডায়ালারে খোলো</string>
+    <string name="contact_cancel">বাতিল</string>
+    <string name="contact_call_started">কল শুরু হচ্ছে।</string>
+    <string name="contact_dialer_opened">ডায়ালার খুলেছি। কল করার বাটন তুমি চাপো।</string>
+    <string name="contact_call_denied">কল করার অনুমতি দাওনি, তাই ডায়ালার খুলেছি। কল করার বাটন তুমি চাপো।</string>
+    <string name="contact_sms_opened">%1$s-কে মেসেজ লেখার স্ক্রিন খুলেছি। বার্তা দেখে নিয়ে পাঠানোর বাটন তুমি চাপো।</string>
+    <string name="contact_who_call">কাকে কল করব? যেমন: সুমনকে কল করো।</string>
+    <string name="contact_who_sms">কাকে মেসেজ পাঠাব? যেমন: সুমনকে মেসেজ পাঠাও আমি আসছি।</string>
+    <string name="contact_app_later">অ্যাপের মাধ্যমে (WhatsApp, Messenger ইত্যাদি) কল বা মেসেজ পরের ফেজে আসছে। এখন অ্যাপের নাম ছাড়া বলো, যেমন: সুমনকে মেসেজ পাঠাও।</string>
+    <string name="contact_failed">সমস্যা: %1$s</string>
+</resources>

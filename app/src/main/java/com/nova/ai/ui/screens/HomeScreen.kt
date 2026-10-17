@@ -42,6 +42,8 @@ import androidx.lifecycle.LifecycleOwner
 import com.nova.ai.R
 import com.nova.ai.apps.AppCommandController
 import com.nova.ai.system.SystemCommandController
+import com.nova.ai.contacts.ContactCommandController
+import com.nova.ai.ui.components.ContactActionCard
 import com.nova.ai.ui.components.SystemActionCard
 import com.nova.ai.core.Language
 import com.nova.ai.core.NovaResult
@@ -114,6 +116,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     // Runs system commands: torch, volume, brightness, Wi-Fi and Bluetooth screens.
     val systemController: SystemCommandController = remember { SystemCommandController(context) }
 
+    // Runs call and message commands, using the phone's contacts.
+    val contactController: ContactCommandController = remember { ContactCommandController(context, scope) }
+
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
         ConversationController(
@@ -144,6 +149,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     while (transcript.size > TRANSCRIPT_LIMIT) transcript.removeAt(0)
                     appController.handleCommand(command.rawText)
                     systemController.handleCommand(command.rawText)
+                    contactController.handleCommand(command.rawText)
                 }
 
                 override fun onEnded(reason: ConversationEnd) {
@@ -308,6 +314,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     statusOverride = receivedText
                     appController.handleCommand(commandText)
                     systemController.handleCommand(commandText)
+                    contactController.handleCommand(commandText)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -318,6 +325,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         AppActionCard(controller = appController)
 
         SystemActionCard(controller = systemController)
+
+        ContactActionCard(controller = contactController)
 
         CommandInsightCard(text = commandText)
 

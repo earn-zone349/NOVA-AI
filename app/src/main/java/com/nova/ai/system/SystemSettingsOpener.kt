@@ -10,8 +10,8 @@ import com.nova.ai.core.NovaResult
 import com.nova.ai.logging.NovaLogger
 
 /**
- * Opens the phone's Wi-Fi and Bluetooth screens. Android does not let ordinary
- * apps switch these on or off, so the user taps the final switch.
+ * Opens the phone's Wi-Fi, Bluetooth and mobile data screens. Android does not
+ * let ordinary apps switch these on or off, so the user taps the final switch.
  */
 class SystemSettingsOpener(context: Context) {
 
@@ -28,6 +28,15 @@ class SystemSettingsOpener(context: Context) {
 
     /** Opens the Bluetooth settings page. */
     fun openBluetooth(): NovaResult<Unit> = start(Settings.ACTION_BLUETOOTH_SETTINGS)
+
+    /** Opens the internet panel (Android 10 and newer) or the mobile network settings page. */
+    fun openMobileData(): NovaResult<Unit> {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val panel: NovaResult<Unit> = start(Settings.Panel.ACTION_INTERNET_CONNECTIVITY)
+            if (panel is NovaResult.Success) return panel
+        }
+        return start(Settings.ACTION_DATA_ROAMING_SETTINGS)
+    }
 
     private fun start(action: String): NovaResult<Unit> {
         return try {

@@ -258,6 +258,8 @@ object IntentParser {
 
     private fun parseCall(v: CommandView): NovaIntent? {
         if (!v.hasAny(IntentVocabulary.CALL_WORDS)) return null
+        // nova-open-phone-guard: an "open" word without a number means opening the phone app.
+        if (v.hasAny(IntentVocabulary.OPEN_VERBS_STRONG) && findPhoneNumber(v) == null) return null
 
         val entities = linkedMapOf<String, String>()
         val number: String? = findPhoneNumber(v)
