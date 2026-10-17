@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="time_title">অ্যালার্ম ও টাইমার</string>
+    <string name="time_default_reminder_label">রিমাইন্ডার</string>
+
+    <string name="time_alarm_set">অ্যালার্ম সেট করেছি: %1$s।</string>
+    <string name="time_alarm_set_label">অ্যালার্ম সেট করেছি: %1$s। নাম: %2$s</string>
+    <string name="time_reminder_set">রিমাইন্ডার সেট করেছি: %1$s। বার্তা: %2$s</string>
+    <string name="time_timer_set">টাইমার চালু করেছি: %1$s।</string>
+    <string name="time_timer_set_label">টাইমার চালু করেছি: %1$s। নাম: %2$s</string>
+    <string name="time_reminder_timer_set">%1$s পরে মনে করানোর টাইমার চালু করেছি। বার্তা: %2$s</string>
+
+    <string name="time_ask_period">সময় %1$s। এটা সকালের, নাকি বিকাল বা রাতের?</string>
+    <string name="time_need_timer">কত সময়ের টাইমার? যেমন: ৫ মিনিটের টাইমার দাও।</string>
+    <string name="time_need_alarm">কয়টায় অ্যালার্ম দেব? যেমন: সকাল ৭টায় অ্যালার্ম দাও।</string>
+    <string name="time_need_reminder">কখন মনে করাব? যেমন: বিকাল ৫টায় ওষুধ খাওয়ার রিমাইন্ডার দাও।</string>
+
+    <string name="time_open_clock">ক্লক অ্যাপে দেখো</string>
+    <string name="time_add_calendar">ক্যালেন্ডারেও যোগ করো</string>
+    <string name="time_failed">সমস্যা: %1$s</string>
+</resources>

@@ -2,7 +2,7 @@
 <resources>
     <string name="intent_title">বোঝা উদ্দেশ্য</string>
     <string name="intent_confidence">নিশ্চিততা: %1$d%%</string>
-    <string name="intent_note">বোঝা হয়েছে। এখন শুধু অ্যাপ খোলা কাজ করে, বাকি কাজ পরের ফেজে আসবে।</string>
+    <string name="intent_note">বোঝা হয়েছে।</string>
     <string name="intent_unknown_hint">এই কমান্ডটি এখনো বুঝতে পারিনি। অন্যভাবে বলে দেখো।</string>
     <string name="intent_error">বিশ্লেষণে সমস্যা: %1$s</string>
 

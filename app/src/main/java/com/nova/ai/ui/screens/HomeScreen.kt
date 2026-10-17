@@ -43,6 +43,8 @@ import com.nova.ai.R
 import com.nova.ai.apps.AppCommandController
 import com.nova.ai.system.SystemCommandController
 import com.nova.ai.contacts.ContactCommandController
+import com.nova.ai.time.TimeCommandController
+import com.nova.ai.ui.components.TimeActionCard
 import com.nova.ai.ui.components.ContactActionCard
 import com.nova.ai.ui.components.SystemActionCard
 import com.nova.ai.core.Language
@@ -119,6 +121,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     // Runs call and message commands, using the phone's contacts.
     val contactController: ContactCommandController = remember { ContactCommandController(context, scope) }
 
+    // Sets alarms, timers and reminders in the phone's clock app.
+    val timeController: TimeCommandController = remember { TimeCommandController(context) }
+
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
         ConversationController(
@@ -150,6 +155,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     appController.handleCommand(command.rawText)
                     systemController.handleCommand(command.rawText)
                     contactController.handleCommand(command.rawText)
+                    timeController.handleCommand(command.rawText)
                 }
 
                 override fun onEnded(reason: ConversationEnd) {
@@ -315,6 +321,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     appController.handleCommand(commandText)
                     systemController.handleCommand(commandText)
                     contactController.handleCommand(commandText)
+                    timeController.handleCommand(commandText)
                 }
             },
             modifier = Modifier.fillMaxWidth()
@@ -327,6 +334,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         SystemActionCard(controller = systemController)
 
         ContactActionCard(controller = contactController)
+
+        TimeActionCard(controller = timeController)
 
         CommandInsightCard(text = commandText)
 
