@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App library (Access tab) -->
+    <string name="apps_title">নোভার অ্যাপ</string>
+    <string name="apps_note">নোভা শুধু এই তালিকার অ্যাপ খুলবে। তালিকা শুধু তোমার ফোনেই থাকে।</string>
+    <string name="apps_count">মোট %1$d টি অ্যাপ যোগ করা আছে</string>
+    <string name="apps_add_button">অ্যাপ যোগ করো</string>
+    <string name="apps_empty">এখনো কোনো অ্যাপ যোগ করা হয়নি। \"অ্যাপ যোগ করো\" চেপে বাছাই করো।</string>
+    <string name="apps_alias_label">ডাকনাম: %1$s</string>
+    <string name="apps_alias_none">ডাকনাম নেই</string>
+    <string name="apps_not_installed">⚠ ফোনে এই অ্যাপ নেই</string>
+    <string name="apps_edit">ডাকনাম বদলাও</string>
+    <string name="apps_remove">বাদ দাও</string>
+    <string name="apps_error">অ্যাপের তালিকায় সমস্যা: %1$s</string>
+
+    <!-- Picker dialog -->
+    <string name="picker_title">অ্যাপ বাছাই করো</string>
+    <string name="picker_search">অ্যাপ খোঁজো</string>
+    <string name="picker_confirm">যোগ করো (%1$d)</string>
+    <string name="picker_cancel">বাতিল</string>
+    <string name="picker_already">✓ যোগ করা আছে</string>
+    <string name="picker_empty">কোনো অ্যাপ পাওয়া যায়নি।</string>
+
+    <!-- Alias dialog -->
+    <string name="alias_title">ডাকনাম: %1$s</string>
+    <string name="alias_help">যে নামে তুমি অ্যাপটিকে ডাকো, সেটা লেখো। যেমন: ফ্রি ফায়ার, এফএফ</string>
+    <string name="alias_hint">ডাকনাম (কমা দিয়ে আলাদা করো)</string>
+    <string name="alias_save">সেভ করো</string>
+
+    <!-- Onboarding step -->
+    <string name="onboarding_apps_title">কোন অ্যাপগুলো নোভা চালাবে?</string>
+    <string name="onboarding_apps_body">নোভা শুধু তোমার বাছাই করা অ্যাপ খুলবে। পরে Access ট্যাব থেকে যোগ বা বাদ দেওয়া যাবে।</string>
+    <string name="onboarding_apps_button">অ্যাপ বাছাই করো</string>
+    <string name="onboarding_apps_selected">%1$d টি অ্যাপ বাছাই করা হয়েছে</string>
+    <string name="onboarding_apps_skip_note">এখন না চাইলে সরাসরি \"শুরু করো\" চাপো।</string>
+
+    <!-- Home: app action card -->
+    <string name="action_title">অ্যাপ খোলা</string>
+    <string name="action_opened">✅ খুলছি: %1$s</string>
+    <string name="action_confirm">\"%1$s\" বলতে কি %2$s বুঝিয়েছো?</string>
+    <string name="action_confirm_yes">হ্যাঁ, খোলো</string>
+    <string name="action_confirm_no">না</string>
+    <string name="action_choose">\"%1$s\": কোনটি খুলব?</string>
+    <string name="action_suggest">\"%1$s\" নোভার তালিকায় নেই। ফোনে এগুলো পেয়েছি। যোগ করে খুলব?</string>
+    <string name="action_suggest_button">%1$s যোগ করে খোলো</string>
+    <string name="action_not_found">\"%1$s\" নামে কোনো অ্যাপ ফোনে পেলাম না। Access ট্যাবে \"অ্যাপ যোগ করো\" দিয়ে খুঁজে দেখো।</string>
+    <string name="action_failed">অ্যাপ খুলতে সমস্যা: %1$s</string>
+    <string name="action_dismiss">বন্ধ করো</string>
+</resources>

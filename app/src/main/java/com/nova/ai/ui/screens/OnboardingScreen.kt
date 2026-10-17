@@ -13,27 +13,35 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nova.ai.R
+import com.nova.ai.apps.AppLibraryController
 import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.ThemeMode
+import com.nova.ai.ui.components.AppPickerDialog
 import com.nova.ai.ui.components.NovaChoiceGroup
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.languageLabel
 import com.nova.ai.ui.components.themeModeLabel
+import kotlinx.coroutines.CoroutineScope
 
-private const val TOTAL_STEPS: Int = 3
+private const val TOTAL_STEPS: Int = 4
 
 /**
- * First-run guide: welcome, feature overview, then language and theme choice.
+ * First-run guide: welcome, feature overview, language and theme choice,
+ * then choosing the apps NOVA may control.
  * Calls [onFinished] with the chosen settings when the user taps Start.
  */
 @Composable
@@ -41,9 +49,15 @@ fun OnboardingScreen(
     onFinished: (AppLanguage, ThemeMode) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val scope: CoroutineScope = rememberCoroutineScope()
+    val library: AppLibraryController = remember { AppLibraryController(context, scope) }
+    LaunchedEffect(library) { library.refresh() }
+
     var step: Int by rememberSaveable { mutableStateOf(0) }
     var language: AppLanguage by rememberSaveable { mutableStateOf(AppLanguage.BANGLA) }
     var theme: ThemeMode by rememberSaveable { mutableStateOf(ThemeMode.SYSTEM) }
+    var showPicker: Boolean by rememberSaveable { mutableStateOf(false) }
     val lastStep: Int = TOTAL_STEPS - 1
 
     Column(
@@ -64,11 +78,15 @@ fun OnboardingScreen(
             when (step) {
                 0 -> WelcomeStep()
                 1 -> FeaturesStep()
-                else -> PreferencesStep(
+                2 -> PreferencesStep(
                     language = language,
                     theme = theme,
                     onLanguageChange = { language = it },
                     onThemeChange = { theme = it }
+                )
+                else -> AppsStep(
+                    selectedCount = library.registered.size,
+                    onPickApps = { showPicker = true }
                 )
             }
         }
@@ -98,6 +116,18 @@ fun OnboardingScreen(
                 )
             }
         }
+    }
+
+    if (showPicker) {
+        AppPickerDialog(
+            installed = library.installed,
+            registeredPackages = library.registered.map { it.packageName }.toSet(),
+            onConfirm = { chosen ->
+                library.addApps(chosen)
+                showPicker = false
+            },
+            onDismiss = { showPicker = false }
+        )
     }
 }
 
@@ -164,6 +194,36 @@ private fun PreferencesStep(
     )
     Text(
         text = stringResource(R.string.onboarding_prefs_note),
+        style = MaterialTheme.typography.bodySmall
+    )
+}
+
+@Composable
+private fun AppsStep(
+    selectedCount: Int,
+    onPickApps: () -> Unit
+) {
+    Text(
+        text = stringResource(R.string.onboarding_apps_title),
+        style = MaterialTheme.typography.headlineMedium,
+        fontWeight = FontWeight.Bold
+    )
+    Text(
+        text = stringResource(R.string.onboarding_apps_body),
+        style = MaterialTheme.typography.bodyMedium
+    )
+    Button(
+        onClick = onPickApps,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(stringResource(R.string.onboarding_apps_button))
+    }
+    Text(
+        text = stringResource(R.string.onboarding_apps_selected, selectedCount),
+        style = MaterialTheme.typography.titleMedium
+    )
+    Text(
+        text = stringResource(R.string.onboarding_apps_skip_note),
         style = MaterialTheme.typography.bodySmall
     )
 }

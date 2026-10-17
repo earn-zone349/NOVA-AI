@@ -16,7 +16,7 @@
     <string name="home_status_idle">প্রস্তুত। ভয়েস কমান্ড P6-এ চালু হবে।</string>
     <string name="home_command_hint">কমান্ড লেখো</string>
     <string name="home_send">পাঠাও</string>
-    <string name="home_status_command_received">কমান্ড নেওয়া হয়েছে। বোঝার ইঞ্জিন P11-এ যোগ হবে।</string>
+    <string name="home_status_command_received">কমান্ড নেওয়া হয়েছে।</string>
     <string name="home_status_empty_command">আগে একটি কমান্ড লেখো।</string>
     <string name="home_progress_title">চলমান কাজ</string>
     <string name="home_progress_none">কোনো কাজ চলছে না।</string>

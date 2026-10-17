@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -39,16 +40,18 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.nova.ai.R
+import com.nova.ai.apps.AppCommandController
 import com.nova.ai.core.Language
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
 import com.nova.ai.logging.NovaLogger
 import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SpeechSpeed
-import com.nova.ai.ui.components.NovaInfoCard
-import com.nova.ai.ui.components.NovaScreenLayout
+import com.nova.ai.ui.components.AppActionCard
 import com.nova.ai.ui.components.CommandInsightCard
 import com.nova.ai.ui.components.IntentInsightCard
+import com.nova.ai.ui.components.NovaInfoCard
+import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.theme.LocalAppSettings
 import com.nova.ai.voice.AndroidVoiceEngine
 import com.nova.ai.voice.ConversationController
@@ -57,6 +60,7 @@ import com.nova.ai.voice.ConversationListener
 import com.nova.ai.voice.ConversationState
 import com.nova.ai.voice.SpokenReply
 import com.nova.ai.voice.toSpeechLanguage
+import kotlinx.coroutines.CoroutineScope
 
 private const val TAG: String = "HomeScreen"
 private const val TRANSCRIPT_LIMIT: Int = 5
@@ -65,11 +69,13 @@ private const val TRANSCRIPT_LIMIT: Int = 5
  * Home: voice button, command box, current status and running-task progress.
  * The mic button starts a conversation: the app listens, confirms by voice,
  * and (when continuous mode is on) listens again by itself until the user says
- * stop, stays silent, or leaves the screen. Command understanding comes in Phase 11.
+ * stop, stays silent, or leaves the screen. Commands that ask to open an app
+ * are carried out using the user's app library.
  */
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
+    val scope: CoroutineScope = rememberCoroutineScope()
     val settings = LocalAppSettings.current
     val currentLanguage: AppLanguage by rememberUpdatedState(settings.language)
     val currentSpeed: SpeechSpeed by rememberUpdatedState(settings.speechSpeed)
@@ -100,6 +106,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         )
     }
 
+    // Opens apps from commands, using the user's app library.
+    val appController: AppCommandController = remember { AppCommandController(context, scope) }
+
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
         ConversationController(
@@ -128,6 +137,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     statusOverride = context.getString(R.string.home_status_heard, command.rawText)
                     transcript.add("$commandCount. ${command.rawText}")
                     while (transcript.size > TRANSCRIPT_LIMIT) transcript.removeAt(0)
+                    appController.handleCommand(command.rawText)
                 }
 
                 override fun onEnded(reason: ConversationEnd) {
@@ -285,14 +295,22 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
         Button(
             onClick = {
-                statusOverride = if (commandText.isBlank()) emptyText else receivedText
+                if (commandText.isBlank()) {
+                    statusOverride = emptyText
+                } else {
+                    statusOverride = receivedText
+                    appController.handleCommand(commandText)
+                }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.home_send))
         }
 
+        AppActionCard(controller = appController)
+
         CommandInsightCard(text = commandText)
+
         IntentInsightCard(text = commandText, history = transcript.toList())
 
         if (transcript.isNotEmpty()) {

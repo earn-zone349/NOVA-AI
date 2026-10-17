@@ -4,10 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.nova.ai.R
+import com.nova.ai.ui.components.AppLibrarySection
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
 
-/** Permissions: explains why each permission is needed. Live status comes in P17. */
+/** Permissions: explains why each permission is needed, and manages NOVA's app list. */
 @Composable
 fun PermissionsScreen(modifier: Modifier = Modifier) {
     val pending: String = stringResource(R.string.perm_status_pending)
@@ -29,5 +30,7 @@ fun PermissionsScreen(modifier: Modifier = Modifier) {
             title = stringResource(R.string.perm_notification_title),
             body = stringResource(R.string.perm_notification_body) + "\n" + pending
         )
+
+        AppLibrarySection()
     }
 }
