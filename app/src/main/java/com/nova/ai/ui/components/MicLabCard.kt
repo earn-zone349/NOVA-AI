@@ -300,7 +300,7 @@ private fun ColumnScope.RecognitionSection(controller: MicLabController) {
         )
         Switch(
             checked = controller.autoRecognize,
-            onCheckedChange = { controller.setAutoRecognize(it) },
+            onCheckedChange = { controller.updateAutoRecognize(it) },
             enabled = controller.feedSupported
         )
     }

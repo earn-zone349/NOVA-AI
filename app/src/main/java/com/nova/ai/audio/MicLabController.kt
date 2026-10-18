@@ -233,7 +233,7 @@ class MicLabController(
     }
 
     /** Turns automatic sending of detected speech to the recognizer on or off. */
-    fun setAutoRecognize(enabled: Boolean) {
+    fun updateAutoRecognize(enabled: Boolean) {
         autoRecognize = enabled
     }
 
