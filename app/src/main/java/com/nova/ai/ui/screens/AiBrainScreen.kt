@@ -30,6 +30,7 @@ import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SpeechSpeed
 import com.nova.ai.settings.ThemeMode
 import com.nova.ai.ui.components.NovaChoiceGroup
+import com.nova.ai.ui.components.MicLabCard
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.components.languageLabel
@@ -90,6 +91,8 @@ fun AiBrainScreen(modifier: Modifier = Modifier) {
             title = stringResource(R.string.brain_language_title),
             body = stringResource(R.string.brain_language_body)
         )
+
+        MicLabCard()
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {

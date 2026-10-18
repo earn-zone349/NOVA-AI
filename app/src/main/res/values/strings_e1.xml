@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mic_lab_title">মাইক পরীক্ষা (ইঞ্জিন E1)</string>
+    <string name="mic_lab_note">নতুন একটানা শোনার ইঞ্জিনের ভিত্তি। মাইক চালু করে কথা বলো, বারটি নড়বে। এখনো লেখা বানানো হয় না।</string>
+    <string name="mic_lab_start">মাইক চালু করো</string>
+    <string name="mic_lab_stop">মাইক বন্ধ করো</string>
+    <string name="mic_lab_level">শব্দের মাত্রা</string>
+    <string name="mic_lab_profile_title">মাইকের ধরন</string>
+    <string name="mic_lab_profile_clean">পরিষ্কার (শোনার জন্য সেরা)</string>
+    <string name="mic_lab_profile_echo">ইকো-নিরাপদ (নোভা বলার সময় মাঝে বলার জন্য)</string>
+    <string name="mic_lab_effects">ফোনের সুবিধা: ইকো কমানো: %1$s, গোলমাল কমানো: %2$s, ভলিউম সমতা: %3$s</string>
+    <string name="mic_lab_effect_on">চালু</string>
+    <string name="mic_lab_effect_off">আছে, বন্ধ</string>
+    <string name="mic_lab_effect_none">নেই</string>
+    <string name="mic_lab_record">৫ সেকেন্ড রেকর্ড করো</string>
+    <string name="mic_lab_recording">রেকর্ড হচ্ছে... বলো</string>
+    <string name="mic_lab_play">রেকর্ড শোনো</string>
+    <string name="mic_lab_playing">বাজছে...</string>
+    <string name="mic_lab_clip_ready">রেকর্ড তৈরি: %1$d সেকেন্ড</string>
+    <string name="mic_lab_silent">মাইক থেকে কোনো শব্দ আসছে না। অন্য কোনো অ্যাপ মাইক ধরে থাকতে পারে, বা মাইক ঢাকা আছে।</string>
+    <string name="mic_lab_permission">মাইকের অনুমতি ছাড়া পরীক্ষা চলবে না।</string>
+    <string name="mic_lab_error">মাইক সমস্যা: %1$s</string>
+</resources>
