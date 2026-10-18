@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import com.nova.ai.R
 import com.nova.ai.core.NovaError
 import com.nova.ai.core.NovaResult
+import com.nova.ai.settings.AppLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -17,34 +18,51 @@ import kotlinx.coroutines.launch
 /** What the test card is doing with the sound. */
 enum class LabPhase { IDLE, RECORDING, PLAYING }
 
-/** One detected piece of speech, kept for replay in the test card. */
+/** What happened when a piece of speech was sent to the recognizer. */
+sealed class RecognitionStatus {
+    object NotSent : RecognitionStatus()
+    object Sending : RecognitionStatus()
+    data class Done(val text: String, val latencyMs: Long) : RecognitionStatus()
+    data class Failed(val message: String, val latencyMs: Long) : RecognitionStatus()
+}
+
+/** One detected piece of speech, kept for replay and recognition in the test card. */
 class Utterance(
     val id: Int,
     val durationMs: Long,
     val samples: ShortArray,
     val endReason: SegmentEnd
-)
+) {
+    /** The recognizer's answer for this piece. */
+    var recognition: RecognitionStatus by mutableStateOf<RecognitionStatus>(RecognitionStatus.NotSent)
+}
 
 /**
  * Screen-side holder for the microphone test card: starts and stops the
- * microphone, shows the level, finds pieces of speech, records a 5-second clip
- * and plays sounds back. Use from the main thread.
+ * microphone, shows the level, finds pieces of speech, sends them to Google's
+ * recognizer, records a 5-second clip and plays sounds back.
+ * [languageProvider] gives the language chosen in settings. Use from the main thread.
  */
 class MicLabController(
     context: Context,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val languageProvider: () -> AppLanguage = { AppLanguage.BANGLA }
 ) {
 
     private val appContext: Context = context.applicationContext
     private val engine = AudioCaptureEngine(appContext)
     private val detector = SpeechDetector(engine)
     private val player = ClipPlayer()
+    private val bridge = GoogleRecognizerBridge(appContext, scope)
 
     private var clipJob: Job? = null
     private var lastClip: ShortArray? = null
     private var lastSignalMs: Long = 0L
     private var nextUtteranceId: Int = 1
     private val utteranceList = mutableStateListOf<Utterance>()
+
+    private val recognitionQueue = ArrayDeque<Utterance>()
+    private var inFlight: Utterance? = null
 
     var isRunning: Boolean by mutableStateOf(false)
         private set
@@ -93,6 +111,21 @@ class MicLabController(
     var playingUtteranceId: Int? by mutableStateOf<Int?>(null)
         private set
 
+    // ---- recognition state ----
+
+    /** True if this Android version can feed our own sound to the recognizer. */
+    val feedSupported: Boolean = bridge.isFeedSupported()
+
+    /** True if the phone has an offline recognizer. */
+    val onDeviceAvailable: Boolean = bridge.isOnDeviceAvailable()
+
+    var autoRecognize: Boolean by mutableStateOf(true)
+        private set
+
+    var recognitionService: GoogleRecognizerBridge.Service by
+        mutableStateOf(GoogleRecognizerBridge.Service.ONLINE)
+        private set
+
     /** The newest detected pieces of speech, newest first. */
     val utterances: List<Utterance>
         get() = utteranceList
@@ -127,14 +160,15 @@ class MicLabController(
             // A piece cut for length means the speaker is probably still talking.
             speaking = segment.endReason == SegmentEnd.MAX_LENGTH
             detectedCount += 1
-            utteranceList.add(
-                0,
-                Utterance(nextUtteranceId, segment.durationMs, segment.samples, segment.endReason)
-            )
+
+            val item = Utterance(nextUtteranceId, segment.durationMs, segment.samples, segment.endReason)
             nextUtteranceId += 1
+            utteranceList.add(0, item)
             while (utteranceList.size > MAX_KEPT_UTTERANCES) {
                 utteranceList.removeAt(utteranceList.lastIndex)
             }
+
+            if (autoRecognize && feedSupported) enqueueRecognition(item)
         }
 
         override fun onSpeechDiscarded(durationMs: Long) {
@@ -162,7 +196,7 @@ class MicLabController(
         }
     }
 
-    /** Closes the microphone and stops any recording or playback. */
+    /** Closes the microphone and stops any recording or playback. Sending to Google continues. */
     fun stop() {
         clipJob?.cancel()
         clipJob = null
@@ -198,6 +232,22 @@ class MicLabController(
         detector.updateConfig(VadConfig(sensitivity = sensitivity, pause = value))
     }
 
+    /** Turns automatic sending of detected speech to the recognizer on or off. */
+    fun setAutoRecognize(enabled: Boolean) {
+        autoRecognize = enabled
+    }
+
+    /** Chooses which recognizer service receives the sound. */
+    fun selectRecognitionService(service: GoogleRecognizerBridge.Service) {
+        recognitionService = service
+    }
+
+    /** Sends one detected piece of speech to the recognizer (again, if it was sent before). */
+    fun recognize(id: Int) {
+        val item: Utterance = utteranceList.firstOrNull { it.id == id } ?: return
+        enqueueRecognition(item)
+    }
+
     /** Records the next 5 seconds and keeps them for playback. */
     fun recordClip() {
         if (!isRunning || phase != LabPhase.IDLE) return
@@ -231,9 +281,43 @@ class MicLabController(
         errorMessage = appContext.getString(R.string.mic_lab_permission)
     }
 
-    /** Releases everything. Call when the screen is gone. */
+    /** Releases everything, including any request to the recognizer. Call when the screen is gone. */
     fun release() {
         stop()
+        bridge.cancel()
+        for (waiting in recognitionQueue) waiting.recognition = RecognitionStatus.NotSent
+        recognitionQueue.clear()
+        inFlight?.recognition = RecognitionStatus.NotSent
+        inFlight = null
+    }
+
+    // ---------------------------------------------------------------- recognition queue
+
+    private fun enqueueRecognition(item: Utterance) {
+        if (item.recognition is RecognitionStatus.Sending) return
+        item.recognition = RecognitionStatus.Sending
+        recognitionQueue.addLast(item)
+        pumpRecognition()
+    }
+
+    // One request at a time: the next starts when the previous has an answer.
+    private fun pumpRecognition() {
+        if (inFlight != null) return
+        val next: Utterance = recognitionQueue.removeFirstOrNull() ?: return
+        inFlight = next
+
+        bridge.recognize(next.samples, recognitionService, languageProvider()) { outcome ->
+            next.recognition = statusOf(outcome)
+            inFlight = null
+            pumpRecognition()
+        }
+    }
+
+    private fun statusOf(outcome: GoogleRecognizerBridge.Outcome): RecognitionStatus {
+        val text: String? = outcome.text?.takeIf { it.isNotBlank() }
+        if (text != null) return RecognitionStatus.Done(text, outcome.latencyMs)
+        val message: String = outcome.error?.message ?: appContext.getString(R.string.rec_empty)
+        return RecognitionStatus.Failed(message, outcome.latencyMs)
     }
 
     private fun startPlayback(samples: ShortArray, utteranceId: Int?) {

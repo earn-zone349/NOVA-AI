@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="rec_title">Google-এ কথা চেনা (ইঞ্জিন E4)</string>
+    <string name="rec_note">ধরা প্রতিটি কথা নিজের অডিও হিসেবে Google-এর ভয়েস সার্ভিসে পাঠিয়ে লেখা আনা হয়। পাঠানোর সময় বিপ শোনা যায় কি না খেয়াল করো।</string>
+    <string name="rec_privacy">ইন্টারনেট মোডে তোমার কথার অডিও Google-এর সার্ভারে যায়। অফলাইন মোডে ফোনের ভেতরেই থাকে।</string>
+    <string name="rec_support_ok">নিজের অডিও পাঠানোর সুবিধা: এই ফোনের Android সমর্থন করে (Android 13 বা তার বেশি)।</string>
+    <string name="rec_support_no">নিজের অডিও পাঠানোর সুবিধা: এই ফোনের Android-এ নেই (Android 13 বা তার বেশি লাগে)।</string>
+    <string name="rec_ondevice_yes">ফোনে অফলাইন ভয়েস সার্ভিস: আছে</string>
+    <string name="rec_ondevice_no">ফোনে অফলাইন ভয়েস সার্ভিস: নেই</string>
+    <string name="rec_auto_label">ধরা কথা নিজে Google-এ পাঠাও</string>
+    <string name="rec_engine_title">কোন সার্ভিসে পাঠাব</string>
+    <string name="rec_engine_online">ইন্টারনেট (সবচেয়ে নির্ভুল)</string>
+    <string name="rec_engine_on_device">ফোনের অফলাইন সার্ভিস</string>
+    <string name="rec_send">Google-এ পাঠাও</string>
+    <string name="rec_resend">আবার পাঠাও</string>
+    <string name="rec_sending">পাঠানো হচ্ছে...</string>
+    <string name="rec_result">লেখা: %1$s (সময়: %2$s সেকেন্ড)</string>
+    <string name="rec_failed">চেনা যায়নি: %1$s (সময়: %2$s সেকেন্ড)</string>
+    <string name="rec_empty">কিছু বোঝা যায়নি।</string>
+</resources>

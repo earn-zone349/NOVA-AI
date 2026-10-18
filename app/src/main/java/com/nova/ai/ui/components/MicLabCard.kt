@@ -16,12 +16,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,13 +38,17 @@ import com.nova.ai.R
 import com.nova.ai.audio.AudioEffectsStatus
 import com.nova.ai.audio.CaptureProfile
 import com.nova.ai.audio.EffectState
+import com.nova.ai.audio.GoogleRecognizerBridge
 import com.nova.ai.audio.LabPhase
 import com.nova.ai.audio.MicLabController
 import com.nova.ai.audio.PauseTolerance
+import com.nova.ai.audio.RecognitionStatus
 import com.nova.ai.audio.SegmentEnd
 import com.nova.ai.audio.Utterance
 import com.nova.ai.audio.VadSensitivity
+import com.nova.ai.settings.AppLanguage
 import com.nova.ai.time.TimeText
+import com.nova.ai.ui.theme.LocalAppSettings
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
@@ -49,14 +56,19 @@ import kotlinx.coroutines.CoroutineScope
 /**
  * Test card for the new listening engine: switch the microphone on, watch the
  * level move, compare the two microphone types, record and replay 5 seconds,
- * and see how the engine cuts your speech into pieces.
+ * see how the engine cuts your speech into pieces, and send each piece to
+ * Google's recognizer to get the text.
  * The microphone closes when the app goes to the background or the screen is left.
  */
 @Composable
 fun MicLabCard(modifier: Modifier = Modifier) {
     val context: Context = LocalContext.current
     val scope: CoroutineScope = rememberCoroutineScope()
-    val controller: MicLabController = remember { MicLabController(context, scope) }
+    val settings = LocalAppSettings.current
+    val currentLanguage: AppLanguage by rememberUpdatedState(settings.language)
+    val controller: MicLabController = remember {
+        MicLabController(context, scope) { currentLanguage }
+    }
 
     val lifecycleOwner: LifecycleOwner? = context as? LifecycleOwner
     DisposableEffect(lifecycleOwner, controller) {
@@ -187,6 +199,8 @@ fun MicLabCard(modifier: Modifier = Modifier) {
             }
 
             DetectionSection(controller)
+            RecognitionSection(controller)
+            UtteranceListSection(controller)
 
             controller.errorMessage?.let { message ->
                 Text(
@@ -199,7 +213,7 @@ fun MicLabCard(modifier: Modifier = Modifier) {
     }
 }
 
-/** The speech detection part of the card: live state, settings and the list of detected speech. */
+/** The speech detection part: live state and settings. */
 @Composable
 private fun ColumnScope.DetectionSection(controller: MicLabController) {
     Text(
@@ -244,53 +258,153 @@ private fun ColumnScope.DetectionSection(controller: MicLabController) {
         text = stringResource(R.string.vad_count, controller.detectedCount, controller.discardedCount),
         style = MaterialTheme.typography.bodyMedium
     )
+}
 
+/** The Google recognition part: support status, automatic sending and the chosen service. */
+@Composable
+private fun ColumnScope.RecognitionSection(controller: MicLabController) {
+    Text(
+        text = stringResource(R.string.rec_title),
+        style = MaterialTheme.typography.titleMedium
+    )
+    Text(
+        text = stringResource(R.string.rec_note),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(R.string.rec_privacy),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            if (controller.feedSupported) R.string.rec_support_ok else R.string.rec_support_no
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        text = stringResource(
+            if (controller.onDeviceAvailable) R.string.rec_ondevice_yes else R.string.rec_ondevice_no
+        ),
+        style = MaterialTheme.typography.bodySmall
+    )
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.rec_auto_label),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = controller.autoRecognize,
+            onCheckedChange = { controller.setAutoRecognize(it) },
+            enabled = controller.feedSupported
+        )
+    }
+
+    NovaChoiceGroup(
+        title = stringResource(R.string.rec_engine_title),
+        options = GoogleRecognizerBridge.Service.values().toList(),
+        selected = controller.recognitionService,
+        labelOf = { serviceLabel(it) },
+        onSelected = { controller.selectRecognitionService(it) }
+    )
+}
+
+/** The list of detected pieces of speech, each with replay and recognition result. */
+@Composable
+private fun ColumnScope.UtteranceListSection(controller: MicLabController) {
     if (controller.utterances.isEmpty()) {
         Text(
             text = stringResource(R.string.vad_empty),
             style = MaterialTheme.typography.bodySmall
         )
-    } else {
-        Text(
-            text = stringResource(R.string.vad_list_title),
-            style = MaterialTheme.typography.titleMedium
-        )
-        controller.utterances.forEach { item ->
-            key(item.id) { UtteranceRow(controller, item) }
-        }
+        return
+    }
+    Text(
+        text = stringResource(R.string.vad_list_title),
+        style = MaterialTheme.typography.titleMedium
+    )
+    controller.utterances.forEach { item ->
+        key(item.id) { UtteranceRow(controller, item) }
     }
 }
 
 @Composable
 private fun UtteranceRow(controller: MicLabController, item: Utterance) {
-    val seconds: String = TimeText.digits(String.format(Locale.US, "%.1f", item.durationMs / 1000f))
+    val seconds: String = formatSeconds(item.durationMs)
     val cutNote: String =
         if (item.endReason == SegmentEnd.MAX_LENGTH) stringResource(R.string.vad_reason_max) else ""
     val isPlayingThis: Boolean =
         controller.phase == LabPhase.PLAYING && controller.playingUtteranceId == item.id
 
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = stringResource(R.string.vad_item, item.id, seconds) + cutNote,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f)
-        )
-        OutlinedButton(
-            onClick = { controller.playUtterance(item.id) },
-            enabled = controller.phase == LabPhase.IDLE
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                stringResource(
-                    if (isPlayingThis) R.string.vad_item_playing else R.string.vad_item_play
-                )
+                text = stringResource(R.string.vad_item, item.id, seconds) + cutNote,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f)
             )
+            OutlinedButton(
+                onClick = { controller.playUtterance(item.id) },
+                enabled = controller.phase == LabPhase.IDLE
+            ) {
+                Text(
+                    stringResource(
+                        if (isPlayingThis) R.string.vad_item_playing else R.string.vad_item_play
+                    )
+                )
+            }
+        }
+
+        when (val status = item.recognition) {
+            is RecognitionStatus.NotSent -> {
+                OutlinedButton(
+                    onClick = { controller.recognize(item.id) },
+                    enabled = controller.feedSupported
+                ) {
+                    Text(stringResource(R.string.rec_send))
+                }
+            }
+            is RecognitionStatus.Sending -> {
+                Text(
+                    text = stringResource(R.string.rec_sending),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            is RecognitionStatus.Done -> {
+                Text(
+                    text = stringResource(R.string.rec_result, status.text, formatSeconds(status.latencyMs)),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                OutlinedButton(onClick = { controller.recognize(item.id) }) {
+                    Text(stringResource(R.string.rec_resend))
+                }
+            }
+            is RecognitionStatus.Failed -> {
+                Text(
+                    text = stringResource(R.string.rec_failed, status.message, formatSeconds(status.latencyMs)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                OutlinedButton(onClick = { controller.recognize(item.id) }) {
+                    Text(stringResource(R.string.rec_resend))
+                }
+            }
         }
     }
 }
+
+/** For example 3200 gives "৩.২" (Bangla digits, one decimal). */
+private fun formatSeconds(milliseconds: Long): String =
+    TimeText.digits(String.format(Locale.US, "%.1f", milliseconds / 1000f))
 
 @Composable
 private fun profileLabel(profile: CaptureProfile): String = stringResource(
@@ -315,6 +429,14 @@ private fun pauseLabel(value: PauseTolerance): String = stringResource(
         PauseTolerance.SHORT -> R.string.vad_pause_short
         PauseTolerance.NORMAL -> R.string.vad_pause_normal
         PauseTolerance.LONG -> R.string.vad_pause_long
+    }
+)
+
+@Composable
+private fun serviceLabel(service: GoogleRecognizerBridge.Service): String = stringResource(
+    when (service) {
+        GoogleRecognizerBridge.Service.ONLINE -> R.string.rec_engine_online
+        GoogleRecognizerBridge.Service.ON_DEVICE -> R.string.rec_engine_on_device
     }
 )
 
