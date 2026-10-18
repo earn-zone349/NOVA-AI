@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vad_title">কথা ধরা (ইঞ্জিন E2)</string>
+    <string name="vad_note">ইঞ্জিন নিজে বোঝে কখন তুমি কথা শুরু ও শেষ করলে। মাইক চালু করে কথা বলো, থামো, আবার বলো।</string>
+    <string name="vad_status_speaking">🟢 কথা চলছে</string>
+    <string name="vad_status_quiet">⚪ চুপ</string>
+    <string name="vad_noise">পরিবেশের গোলমাল: %1$d ডিবি</string>
+
+    <string name="vad_sensitivity_title">সংবেদনশীলতা</string>
+    <string name="vad_sens_high">বেশি (শান্ত ঘর, নরম কথা)</string>
+    <string name="vad_sens_normal">স্বাভাবিক</string>
+    <string name="vad_sens_low">কম (গোলমালের জায়গা)</string>
+
+    <string name="vad_pause_title">কথার মাঝের বিরতি</string>
+    <string name="vad_pause_short">ছোট (০.৫ সেকেন্ড, দ্রুত সাড়া)</string>
+    <string name="vad_pause_normal">স্বাভাবিক (০.৭ সেকেন্ড)</string>
+    <string name="vad_pause_long">লম্বা (১ সেকেন্ড, ধীরে বলার জন্য)</string>
+
+    <string name="vad_count">ধরা কথা: %1$d টি, বাদ দেওয়া ছোট গোলমাল: %2$d টি</string>
+    <string name="vad_list_title">সর্বশেষ ধরা কথা</string>
+    <string name="vad_empty">এখনো কোনো কথা ধরা হয়নি।</string>
+    <string name="vad_item">কথা %1$d: %2$s সেকেন্ড</string>
+    <string name="vad_reason_max"> (লম্বা হওয়ায় কাটা)</string>
+    <string name="vad_item_play">শোনো</string>
+    <string name="vad_item_playing">বাজছে...</string>
+</resources>

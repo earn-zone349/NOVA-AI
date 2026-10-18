@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,8 +19,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -34,11 +37,19 @@ import com.nova.ai.audio.CaptureProfile
 import com.nova.ai.audio.EffectState
 import com.nova.ai.audio.LabPhase
 import com.nova.ai.audio.MicLabController
+import com.nova.ai.audio.PauseTolerance
+import com.nova.ai.audio.SegmentEnd
+import com.nova.ai.audio.Utterance
+import com.nova.ai.audio.VadSensitivity
+import com.nova.ai.time.TimeText
+import java.util.Locale
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineScope
 
 /**
  * Test card for the new listening engine: switch the microphone on, watch the
- * level move, compare the two microphone types, and record and replay 5 seconds.
+ * level move, compare the two microphone types, record and replay 5 seconds,
+ * and see how the engine cuts your speech into pieces.
  * The microphone closes when the app goes to the background or the screen is left.
  */
 @Composable
@@ -158,7 +169,7 @@ fun MicLabCard(modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         stringResource(
-                            if (controller.phase == LabPhase.PLAYING) {
+                            if (controller.phase == LabPhase.PLAYING && controller.playingUtteranceId == null) {
                                 R.string.mic_lab_playing
                             } else {
                                 R.string.mic_lab_play
@@ -175,6 +186,8 @@ fun MicLabCard(modifier: Modifier = Modifier) {
                 )
             }
 
+            DetectionSection(controller)
+
             controller.errorMessage?.let { message ->
                 Text(
                     text = stringResource(R.string.mic_lab_error, message),
@@ -186,11 +199,122 @@ fun MicLabCard(modifier: Modifier = Modifier) {
     }
 }
 
+/** The speech detection part of the card: live state, settings and the list of detected speech. */
+@Composable
+private fun ColumnScope.DetectionSection(controller: MicLabController) {
+    Text(
+        text = stringResource(R.string.vad_title),
+        style = MaterialTheme.typography.titleMedium
+    )
+    Text(
+        text = stringResource(R.string.vad_note),
+        style = MaterialTheme.typography.bodySmall
+    )
+
+    if (controller.isRunning) {
+        Text(
+            text = stringResource(
+                if (controller.speaking) R.string.vad_status_speaking else R.string.vad_status_quiet
+            ),
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text(
+            text = stringResource(R.string.vad_noise, controller.noiseFloorDb.roundToInt()),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+
+    NovaChoiceGroup(
+        title = stringResource(R.string.vad_sensitivity_title),
+        options = VadSensitivity.values().toList(),
+        selected = controller.sensitivity,
+        labelOf = { sensitivityLabel(it) },
+        onSelected = { controller.selectSensitivity(it) }
+    )
+
+    NovaChoiceGroup(
+        title = stringResource(R.string.vad_pause_title),
+        options = PauseTolerance.values().toList(),
+        selected = controller.pause,
+        labelOf = { pauseLabel(it) },
+        onSelected = { controller.selectPause(it) }
+    )
+
+    Text(
+        text = stringResource(R.string.vad_count, controller.detectedCount, controller.discardedCount),
+        style = MaterialTheme.typography.bodyMedium
+    )
+
+    if (controller.utterances.isEmpty()) {
+        Text(
+            text = stringResource(R.string.vad_empty),
+            style = MaterialTheme.typography.bodySmall
+        )
+    } else {
+        Text(
+            text = stringResource(R.string.vad_list_title),
+            style = MaterialTheme.typography.titleMedium
+        )
+        controller.utterances.forEach { item ->
+            key(item.id) { UtteranceRow(controller, item) }
+        }
+    }
+}
+
+@Composable
+private fun UtteranceRow(controller: MicLabController, item: Utterance) {
+    val seconds: String = TimeText.digits(String.format(Locale.US, "%.1f", item.durationMs / 1000f))
+    val cutNote: String =
+        if (item.endReason == SegmentEnd.MAX_LENGTH) stringResource(R.string.vad_reason_max) else ""
+    val isPlayingThis: Boolean =
+        controller.phase == LabPhase.PLAYING && controller.playingUtteranceId == item.id
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.vad_item, item.id, seconds) + cutNote,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(
+            onClick = { controller.playUtterance(item.id) },
+            enabled = controller.phase == LabPhase.IDLE
+        ) {
+            Text(
+                stringResource(
+                    if (isPlayingThis) R.string.vad_item_playing else R.string.vad_item_play
+                )
+            )
+        }
+    }
+}
+
 @Composable
 private fun profileLabel(profile: CaptureProfile): String = stringResource(
     when (profile) {
         CaptureProfile.CLEAN -> R.string.mic_lab_profile_clean
         CaptureProfile.ECHO_SAFE -> R.string.mic_lab_profile_echo
+    }
+)
+
+@Composable
+private fun sensitivityLabel(value: VadSensitivity): String = stringResource(
+    when (value) {
+        VadSensitivity.HIGH -> R.string.vad_sens_high
+        VadSensitivity.NORMAL -> R.string.vad_sens_normal
+        VadSensitivity.LOW -> R.string.vad_sens_low
+    }
+)
+
+@Composable
+private fun pauseLabel(value: PauseTolerance): String = stringResource(
+    when (value) {
+        PauseTolerance.SHORT -> R.string.vad_pause_short
+        PauseTolerance.NORMAL -> R.string.vad_pause_normal
+        PauseTolerance.LONG -> R.string.vad_pause_long
     }
 )
 
