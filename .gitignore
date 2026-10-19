@@ -15,3 +15,6 @@ local.properties
 *.keystore
 keystore.properties
 google-services.json
+
+# Downloaded during the build
+app/libs/*.aar

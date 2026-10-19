@@ -14,6 +14,8 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "0.1.0"
+        // Modern phones are 64-bit ARM; this keeps the app small.
+        ndk { abiFilters.add("arm64-v8a") }
     }
 
     buildTypes {
@@ -64,4 +66,5 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 }

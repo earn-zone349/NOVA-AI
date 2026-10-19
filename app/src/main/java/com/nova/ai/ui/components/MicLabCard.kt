@@ -312,6 +312,8 @@ private fun ColumnScope.RecognitionSection(controller: MicLabController) {
         labelOf = { serviceLabel(it) },
         onSelected = { controller.selectRecognitionService(it) }
     )
+
+    WhisperEngineSection()
 }
 
 /** The list of detected pieces of speech, each with replay and recognition result. */

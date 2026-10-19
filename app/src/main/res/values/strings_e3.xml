@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="models_title">অফলাইন মডেল (ইঞ্জিন E3)</string>
+    <string name="models_note">ইন্টারনেট ছাড়া কথা চেনার জন্য Whisper মডেল ফোনে নামিয়ে রাখা যায়। একবার নামালে আর নেট লাগে না।</string>
+    <string name="models_wifi_note">ফাইল বড়, তাই ওয়াইফাই ব্যবহার করো। নেট কেটে গেলে আবার চালালে যেখানে থেমেছিল সেখান থেকে চলবে।</string>
+    <string name="models_free_space">ফোনে ফাঁকা জায়গা: %1$s</string>
+
+    <string name="model_whisper_tiny">Whisper tiny (সবচেয়ে দ্রুত, কম নির্ভুল)</string>
+    <string name="model_whisper_base">Whisper base (মাঝারি)</string>
+    <string name="model_whisper_small">Whisper small (ধীর, বেশি নির্ভুল)</string>
+    <string name="model_size">আকার: প্রায় %1$d MB</string>
+    <string name="model_installed">✓ ফোনে আছে (%1$s)</string>
+    <string name="model_download">ডাউনলোড করো</string>
+    <string name="model_resume">আবার চালাও</string>
+    <string name="model_downloading">ডাউনলোড হচ্ছে: %1$d%% (%2$d MB)</string>
+    <string name="model_cancel">ডাউনলোড থামাও</string>
+    <string name="model_delete">মুছে ফেলো</string>
+    <string name="model_failed">ডাউনলোড ব্যর্থ: %1$s</string>
+
+    <string name="whisper_use_label">Google-এর বদলে অফলাইন Whisper ব্যবহার করো</string>
+    <string name="whisper_model_title">কোন Whisper মডেল</string>
+    <string name="whisper_note">Whisper ধীরে চলে: ছোট কথায়ও কয়েক সেকেন্ড লাগতে পারে, আর প্রথমবার মডেল লোড হতে বেশি সময় যায়।</string>
+    <string name="whisper_missing">এই মডেল এখনো ডাউনলোড করা হয়নি। \"অফলাইন মডেল\" কার্ড থেকে নামাও।</string>
+</resources>

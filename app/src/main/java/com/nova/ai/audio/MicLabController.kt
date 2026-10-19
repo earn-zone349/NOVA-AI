@@ -53,7 +53,7 @@ class MicLabController(
     private val engine = AudioCaptureEngine(appContext)
     private val detector = SpeechDetector(engine)
     private val player = ClipPlayer()
-    private val bridge = GoogleRecognizerBridge(appContext, scope)
+    private val bridge = RecognitionGateway(appContext, scope)
 
     private var clipJob: Job? = null
     private var lastClip: ShortArray? = null

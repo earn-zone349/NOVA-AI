@@ -31,6 +31,7 @@ import com.nova.ai.settings.SpeechSpeed
 import com.nova.ai.settings.ThemeMode
 import com.nova.ai.ui.components.NovaChoiceGroup
 import com.nova.ai.ui.components.MicLabCard
+import com.nova.ai.ui.components.ModelManagerCard
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.components.languageLabel
@@ -93,6 +94,8 @@ fun AiBrainScreen(modifier: Modifier = Modifier) {
         )
 
         MicLabCard()
+
+        ModelManagerCard()
 
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
