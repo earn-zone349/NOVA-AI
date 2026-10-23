@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="scr_title">স্ক্রিন পড়া</string>
+    <string name="scr_note">অন্য অ্যাপের স্ক্রিনের লেখা, বাটন ও ইনপুট ঘর পড়ে শোনায়। \"৫ সেকেন্ড পর পড়ো\" চেপে যে অ্যাপের স্ক্রিন পড়াতে চাও সেখানে চলে যাও।</string>
+    <string name="scr_privacy">পাসওয়ার্ড ঘর এবং ঘরে টাইপ করা লেখা কখনো পড়া বা সেভ করা হয় না।</string>
+    <string name="scr_not_connected">Accessibility সার্ভিস সংযুক্ত নেই। Access ট্যাবে গিয়ে চালু করো।</string>
+
+    <string name="scr_read_delayed">৫ সেকেন্ড পর পড়ো</string>
+    <string name="scr_read_now">এখনই পড়ো</string>
+    <string name="scr_stop">থামাও</string>
+    <string name="scr_waiting">%1$d সেকেন্ড পরে স্ক্রিন পড়া হবে। এখন অন্য অ্যাপে যাও…</string>
+
+    <string name="scr_counts">লেখা: %1$d, বাটন: %2$d, ইনপুট ঘর: %3$d</string>
+    <string name="scr_texts_title">স্ক্রিনের লেখা</string>
+    <string name="scr_buttons_title">বাটন</string>
+    <string name="scr_fields_title">ইনপুট ঘর</string>
+    <string name="scr_more">…আরও %1$d টি</string>
+    <string name="scr_unnamed_fields">নামহীন ইনপুট ঘর: %1$d টি</string>
+    <string name="scr_truncated">লেখা অনেক লম্বা, তাই শুধু শুরুর অংশ বলা হয়েছে।</string>
+    <string name="scr_speak_error">বলতে সমস্যা: %1$s</string>
+
+    <string name="scr_empty">স্ক্রিনে পড়ার মতো কিছু পাওয়া যায়নি। কিছু অ্যাপ (যেমন ব্যাংকিং) স্ক্রিন পড়তে দেয় না।</string>
+    <string name="scr_failed">স্ক্রিন পড়তে সমস্যা হয়েছে।</string>
+
+    <string name="scr_intro_texts_bn">স্ক্রিনে লেখা আছে।</string>
+    <string name="scr_intro_buttons_bn">স্ক্রিনে এই বাটনগুলো আছে।</string>
+    <string name="scr_intro_texts_en">On the screen:</string>
+    <string name="scr_intro_buttons_en">Buttons on the screen:</string>
+</resources>

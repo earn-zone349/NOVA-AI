@@ -46,6 +46,8 @@ import com.nova.ai.contacts.ContactCommandController
 import com.nova.ai.time.TimeCommandController
 import com.nova.ai.media.MediaCommandController
 import com.nova.ai.ui.components.MediaActionCard
+import com.nova.ai.ui.components.ScreenReadCard
+import com.nova.ai.accessibility.ScreenReadController
 import com.nova.ai.ui.components.TimeActionCard
 import com.nova.ai.ui.components.ContactActionCard
 import com.nova.ai.ui.components.SystemActionCard
@@ -129,6 +131,17 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     // Runs music control, searches, navigation and camera commands.
     val mediaController: MediaCommandController = remember { MediaCommandController(context) }
+
+    // Reads the text, buttons and input fields of the screen in front, and speaks them.
+    val screenReadController: ScreenReadController = remember {
+        ScreenReadController(
+            context = context,
+            scope = scope,
+            defaultLanguage = { currentLanguage.toSpeechLanguage() },
+            speak = { text, language -> voiceEngine.speak(text, language) },
+            stopSpeaking = { voiceEngine.stopSpeaking() }
+        )
+    }
 
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
@@ -217,6 +230,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             conversation.shutdown()
             voiceEngine.shutdown()
             systemController.release()
+            screenReadController.stop()
         }
     }
 
@@ -348,6 +362,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         TimeActionCard(controller = timeController)
 
         MediaActionCard(controller = mediaController)
+
+        ScreenReadCard(controller = screenReadController)
 
         CommandInsightCard(text = commandText)
 
