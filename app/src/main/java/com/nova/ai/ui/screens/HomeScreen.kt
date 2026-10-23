@@ -56,6 +56,7 @@ import com.nova.ai.logging.NovaLogger
 import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SpeechSpeed
 import com.nova.ai.ui.components.AppActionCard
+import com.nova.ai.ui.components.SetupReminderCard
 import com.nova.ai.ui.components.CommandInsightCard
 import com.nova.ai.ui.components.IntentInsightCard
 import com.nova.ai.ui.components.NovaInfoCard
@@ -337,6 +338,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
 
         AppActionCard(controller = appController)
+
+        SetupReminderCard()
 
         SystemActionCard(controller = systemController)
 

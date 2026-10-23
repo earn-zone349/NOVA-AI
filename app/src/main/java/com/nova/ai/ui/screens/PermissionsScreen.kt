@@ -5,32 +5,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.nova.ai.R
 import com.nova.ai.ui.components.AppLibrarySection
-import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
+import com.nova.ai.ui.components.SetupWizardCard
 
-/** Permissions: explains why each permission is needed, and manages NOVA's app list. */
+/**
+ * Access: the setup wizard (every permission with its reason and live status)
+ * and NOVA's app list.
+ */
 @Composable
 fun PermissionsScreen(modifier: Modifier = Modifier) {
-    val pending: String = stringResource(R.string.perm_status_pending)
-
     NovaScreenLayout(
         title = stringResource(R.string.permissions_title),
         subtitle = stringResource(R.string.permissions_subtitle),
         modifier = modifier
     ) {
-        NovaInfoCard(
-            title = stringResource(R.string.perm_accessibility_title),
-            body = stringResource(R.string.perm_accessibility_body) + "\n" + pending
-        )
-        NovaInfoCard(
-            title = stringResource(R.string.perm_microphone_title),
-            body = stringResource(R.string.perm_microphone_body) + "\n" + pending
-        )
-        NovaInfoCard(
-            title = stringResource(R.string.perm_notification_title),
-            body = stringResource(R.string.perm_notification_body) + "\n" + pending
-        )
-
+        SetupWizardCard()
         AppLibrarySection()
     }
 }

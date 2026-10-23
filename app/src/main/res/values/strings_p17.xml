@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="a11y_service_description">নোভা তোমার নির্দেশে স্ক্রিনের লেখা পড়ে এবং ক্লিক, লেখা ও স্ক্রলের মতো কাজ করে। পিন বা OTP নিজে লেখে না।</string>
+
+    <string name="setup_title">সেটআপ উইজার্ড</string>
+    <string name="setup_note">নোভার কাজের জন্য দরকারি অনুমতিগুলো এক জায়গায়। "পরের অনুমতি নাও" চাপতে থাকো, বাকিটা নোভা দেখিয়ে দেবে।</string>
+    <string name="setup_progress">%1$d / %2$d ধাপ সম্পন্ন</string>
+    <string name="setup_next">পরের অনুমতি নাও</string>
+    <string name="setup_all_done">✅ সব অনুমতি সম্পন্ন</string>
+    <string name="setup_grant">চালু করো</string>
+    <string name="setup_error">সমস্যা: %1$s</string>
+
+    <string name="setup_mic_title">মাইক্রোফোন</string>
+    <string name="setup_mic_why">তোমার ভয়েস কমান্ড শুনতে লাগে।</string>
+    <string name="setup_contacts_title">কন্টাক্ট</string>
+    <string name="setup_contacts_why">নাম দিয়ে কল বা মেসেজ করতে কন্টাক্ট পড়তে লাগে। কন্টাক্ট ফোনের বাইরে যায় না।</string>
+    <string name="setup_call_title">কল করা</string>
+    <string name="setup_call_why">তুমি নিশ্চিত করার পর সরাসরি কল শুরু করতে লাগে।</string>
+    <string name="setup_notif_title">নোটিফিকেশন দেখানো</string>
+    <string name="setup_notif_why">ব্যাকগ্রাউন্ডে মাইক চালু থাকলে তা জানাতে লাগবে (পরের ফেজে কাজে আসবে)।</string>
+    <string name="setup_a11y_title">Accessibility (স্ক্রিন পড়া ও ক্লিক)</string>
+    <string name="setup_a11y_why">অন্য অ্যাপের স্ক্রিন পড়তে এবং ক্লিক, লেখা ও স্ক্রল করতে লাগে। নোভার সবচেয়ে গুরুত্বপূর্ণ অনুমতি।</string>
+    <string name="setup_settings_title">সিস্টেম সেটিংস বদলানো</string>
+    <string name="setup_settings_why">ব্রাইটনেস বদলাতে লাগে।</string>
+
+    <string name="setup_a11y_help">সেটিংসে "ইনস্টল করা অ্যাপ" বা "Downloaded apps" থেকে NOVA AI বেছে চালু করো। সুইচ ধূসর থাকলে নিচের বাটনে অ্যাপের তথ্য খুলে ওপরে ডানের ⋮ চেপে "Allow restricted settings" চালু করো, তারপর আবার চেষ্টা করো।</string>
+    <string name="setup_app_details">অ্যাপের তথ্য খোলো</string>
+    <string name="setup_a11y_connected">Accessibility সার্ভিস: চালু ও সংযুক্ত ✅</string>
+    <string name="setup_a11y_not_connected">Accessibility সার্ভিস: সেটিংসে চালু আছে, কিন্তু এখনো সংযুক্ত হয়নি। কয়েক সেকেন্ড অপেক্ষা করো, না হলে সেটিংসে একবার বন্ধ করে আবার চালু করো।</string>
+    <string name="setup_last_app">সর্বশেষ দেখা অন্য অ্যাপ: %1$s</string>
+    <string name="setup_last_app_none">সর্বশেষ দেখা অন্য অ্যাপ: এখনো কোনোটি না (অন্য একটি অ্যাপ খুলে ফিরে এসো)</string>
+    <string name="setup_test_home">পরীক্ষা: হোম স্ক্রিনে যাও</string>
+
+    <string name="setup_reminder_title">সেটআপ বাকি আছে</string>
+    <string name="setup_reminder_body">%1$d টি অনুমতি বাকি। Access ট্যাবে গিয়ে "পরের অনুমতি নাও" চাপো।</string>
+</resources>
