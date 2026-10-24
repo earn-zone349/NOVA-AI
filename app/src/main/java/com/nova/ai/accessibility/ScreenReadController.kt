@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import com.nova.ai.R
 import com.nova.ai.core.Language
 import com.nova.ai.core.NovaResult
-import com.nova.ai.core.ScreenSnapshot
 import com.nova.ai.logging.NovaLogger
 import com.nova.ai.voice.LanguageDetector
 import kotlinx.coroutines.CoroutineScope
@@ -27,8 +26,13 @@ sealed interface ScreenReadState {
 
     /** The screen was read. [speakError] is set if speaking it aloud failed. */
     data class Done(
-        val report: ScreenReport,
-        val truncated: Boolean,
+        val appPackage: String?,
+        val nodeCount: Int,
+        val durationMs: Long,
+        val screenTruncated: Boolean,
+        val hiddenSensitive: Int,
+        val summary: ScreenSummary,
+        val speechTruncated: Boolean,
         val speakError: String?
     ) : ScreenReadState
 
@@ -86,47 +90,71 @@ class ScreenReadController(
     }
 
     private suspend fun captureAndSpeak() {
-        val result: NovaResult<ScreenSnapshot> = withContext(Dispatchers.Default) {
+        val result: NovaResult<ScreenCapture> = withContext(Dispatchers.Default) {
             ScreenReader.capture()
         }
-        when (result) {
-            is NovaResult.Failure -> state = ScreenReadState.Failed(result.error.message)
-            is NovaResult.Success -> present(ScreenSummarizer.summarize(result.value))
+        if (result is NovaResult.Success) {
+            present(result.value)
+        } else if (result is NovaResult.Failure) {
+            state = ScreenReadState.Failed(
+                result.error.message ?: appContext.getString(R.string.scr_failed)
+            )
         }
     }
 
-    private fun present(report: ScreenReport) {
-        if (report.isEmpty) {
+    private fun present(capture: ScreenCapture) {
+        val summary: ScreenSummary = ScreenSummarizer.summarize(capture)
+        if (summary.isEmpty) {
             state = ScreenReadState.Failed(appContext.getString(R.string.scr_empty))
             return
         }
         // Only counts are logged, never the content.
         NovaLogger.i(
             TAG,
-            "Screen read: texts=${report.texts.size} buttons=${report.buttons.size} " +
-                "fields=${report.fields.size + report.unnamedFields}"
+            "Screen read: texts=${summary.texts.size} buttons=${summary.actions.size} " +
+                "fields=${summary.fields.size + summary.unnamedFields} hidden=${capture.hiddenSensitiveCount}"
         )
 
         // Speak the texts; if the screen has none, speak its buttons instead.
-        val readTexts: Boolean = report.texts.isNotEmpty()
-        val parts: List<String> = if (readTexts) report.texts else report.buttons
-        if (parts.isEmpty()) {
-            state = ScreenReadState.Done(report, truncated = false, speakError = null)
+        val readTexts: Boolean = summary.texts.isNotEmpty()
+        val rawParts: List<String> = if (readTexts) summary.texts else summary.actions
+
+        fun done(speechTruncated: Boolean, speakError: String?): ScreenReadState.Done =
+            ScreenReadState.Done(
+                appPackage = capture.packageName,
+                nodeCount = capture.nodes.size,
+                durationMs = capture.durationMs,
+                screenTruncated = capture.truncated,
+                hiddenSensitive = capture.hiddenSensitiveCount,
+                summary = summary,
+                speechTruncated = speechTruncated,
+                speakError = speakError
+            )
+
+        if (rawParts.isEmpty()) {
+            state = done(speechTruncated = false, speakError = null)
             return
         }
 
-        val detected: Language = LanguageDetector.detect(parts.joinToString(" "))
+        val detected: Language = LanguageDetector.detect(rawParts.joinToString(" "))
         val language: Language = if (detected == Language.UNKNOWN) defaultLanguage() else detected
+        val english: Boolean = language == Language.ENGLISH
+
+        // A hidden code is spoken as a word instead of the mask symbols.
+        val hiddenWord: String = appContext.getString(
+            if (english) R.string.scr_speech_hidden_en else R.string.scr_speech_hidden_bn
+        )
+        val parts: List<String> = rawParts.map { it.replace(SensitiveNodePolicy.MASK, hiddenWord) }
+
         val speech: SpeechText = ScreenSummarizer.toSpeech(parts)
-        val spoken: String = introFor(language, readTexts) + " " + speech.text
+        val spoken: String = introFor(english, readTexts) + " " + speech.text
 
         val spoke: NovaResult<Unit> = speak(spoken, language)
-        val speakError: String? = (spoke as? NovaResult.Failure)?.error?.message
-        state = ScreenReadState.Done(report, speech.truncated, speakError)
+        val speakError: String? = if (spoke is NovaResult.Failure) spoke.error.message else null
+        state = done(speech.truncated, speakError)
     }
 
-    private fun introFor(language: Language, readTexts: Boolean): String {
-        val english: Boolean = language == Language.ENGLISH
+    private fun introFor(english: Boolean, readTexts: Boolean): String {
         val resId: Int = when {
             readTexts && english -> R.string.scr_intro_texts_en
             readTexts -> R.string.scr_intro_texts_bn
