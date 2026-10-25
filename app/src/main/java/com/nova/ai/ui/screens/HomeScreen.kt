@@ -41,28 +41,26 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import com.nova.ai.R
 import com.nova.ai.apps.AppCommandController
-import com.nova.ai.system.SystemCommandController
 import com.nova.ai.contacts.ContactCommandController
-import com.nova.ai.time.TimeCommandController
-import com.nova.ai.media.MediaCommandController
-import com.nova.ai.ui.components.MediaActionCard
-import com.nova.ai.ui.components.ScreenReadCard
-import com.nova.ai.accessibility.ScreenReadController
-import com.nova.ai.ui.components.TimeActionCard
-import com.nova.ai.ui.components.ContactActionCard
-import com.nova.ai.ui.components.SystemActionCard
 import com.nova.ai.core.Language
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
 import com.nova.ai.logging.NovaLogger
+import com.nova.ai.media.MediaCommandController
 import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SpeechSpeed
+import com.nova.ai.system.SystemCommandController
+import com.nova.ai.time.TimeCommandController
 import com.nova.ai.ui.components.AppActionCard
-import com.nova.ai.ui.components.SetupReminderCard
 import com.nova.ai.ui.components.CommandInsightCard
+import com.nova.ai.ui.components.ContactActionCard
 import com.nova.ai.ui.components.IntentInsightCard
+import com.nova.ai.ui.components.MediaActionCard
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.NovaScreenLayout
+import com.nova.ai.ui.components.SetupReminderCard
+import com.nova.ai.ui.components.SystemActionCard
+import com.nova.ai.ui.components.TimeActionCard
 import com.nova.ai.ui.theme.LocalAppSettings
 import com.nova.ai.voice.AndroidVoiceEngine
 import com.nova.ai.voice.ConversationController
@@ -80,8 +78,9 @@ private const val TRANSCRIPT_LIMIT: Int = 5
  * Home: voice button, command box, current status and running-task progress.
  * The mic button starts a conversation: the app listens, confirms by voice,
  * and (when continuous mode is on) listens again by itself until the user says
- * stop, stays silent, or leaves the screen. Commands that ask to open an app
- * are carried out using the user's app library.
+ * stop, stays silent, or leaves the screen. Every command also goes to the
+ * controllers for opening apps, system actions, calls and messages, alarms and
+ * timers, and music, search, navigation and camera.
  */
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -131,17 +130,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     // Runs music control, searches, navigation and camera commands.
     val mediaController: MediaCommandController = remember { MediaCommandController(context) }
-
-    // Reads the text, buttons and input fields of the screen in front, and speaks them.
-    val screenReadController: ScreenReadController = remember {
-        ScreenReadController(
-            context = context,
-            scope = scope,
-            defaultLanguage = { currentLanguage.toSpeechLanguage() },
-            speak = { text, language -> voiceEngine.speak(text, language) },
-            stopSpeaking = { voiceEngine.stopSpeaking() }
-        )
-    }
 
     // Conversation events arrive on the main thread, so updating UI state here is safe.
     val conversation: ConversationController = remember {
@@ -230,7 +218,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             conversation.shutdown()
             voiceEngine.shutdown()
             systemController.release()
-            screenReadController.stop()
         }
     }
 
@@ -362,8 +349,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         TimeActionCard(controller = timeController)
 
         MediaActionCard(controller = mediaController)
-
-        ScreenReadCard(controller = screenReadController)
 
         CommandInsightCard(text = commandText)
 
