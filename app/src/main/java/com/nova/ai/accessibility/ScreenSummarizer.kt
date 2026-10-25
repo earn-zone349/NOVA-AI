@@ -1,18 +1,22 @@
 package com.nova.ai.accessibility
 
+import com.nova.ai.core.ScreenNode
+import com.nova.ai.core.ScreenSnapshot
+
 /**
- * What is on the screen, sorted into three groups in reading order
- * (top to bottom, left to right). [unnamedFields] counts input fields without a label.
+ * What is on the screen, sorted into three groups in reading order.
+ * [unnamedFields] counts input fields that have no label.
  */
-data class ScreenSummary(
+data class ScreenReport(
+    val packageName: String?,
     val texts: List<String>,
-    val actions: List<String>,
+    val buttons: List<String>,
     val fields: List<String>,
     val unnamedFields: Int
 ) {
     /** True when nothing readable was found. */
     val isEmpty: Boolean
-        get() = texts.isEmpty() && actions.isEmpty() && fields.isEmpty() && unnamedFields == 0
+        get() = texts.isEmpty() && buttons.isEmpty() && fields.isEmpty() && unnamedFields == 0
 }
 
 /** Text prepared for speaking. [truncated] is true if the end was cut off. */
@@ -24,37 +28,36 @@ object ScreenSummarizer {
     /** Speech engines refuse very long text; this keeps a safe margin. */
     const val MAX_SPEECH_CHARS: Int = 1400
 
-    // Items whose tops are closer than this count as one visual row.
+    // Nodes whose tops are closer than this are treated as one visual row.
     private const val ROW_BUCKET_PX: Int = 40
-    // A clickable item with a longer name is really a piece of text (a message row, a link line).
-    private const val LONG_NAME_CHARS: Int = 30
     private const val SEPARATOR: String = ". "
 
-    /** Sorts the items of [capture] into texts, buttons and input fields. */
-    fun summarize(capture: ScreenCapture): ScreenSummary {
-        val ordered: List<UiNode> = capture.nodes.sortedWith(
-            compareBy<UiNode>({ it.bounds.top / ROW_BUCKET_PX }, { it.bounds.left })
+    /** Sorts the nodes of [snapshot] into texts, buttons and input fields. */
+    fun summarize(snapshot: ScreenSnapshot): ScreenReport {
+        val ordered: List<ScreenNode> = snapshot.nodes.sortedWith(
+            compareBy<ScreenNode>({ it.bounds.top / ROW_BUCKET_PX }, { it.bounds.left })
         )
 
         val texts: MutableList<String> = ArrayList()
-        val actions: MutableList<String> = ArrayList()
+        val buttons: MutableList<String> = ArrayList()
         val fields: MutableList<String> = ArrayList()
         var unnamedFields = 0
 
         for (node in ordered) {
-            val name: String = readableName(node)
-            when {
-                node.isEditable ->
-                    if (name.isNotBlank()) fields.add(name) else unnamedFields++
-                node.isClickable && node.isEnabled && name.isNotBlank() && name.length <= LONG_NAME_CHARS ->
-                    actions.add(name)
-                name.isNotBlank() -> texts.add(name)
+            val label: String? = node.text ?: node.contentDescription
+            if (node.isEditable) {
+                if (label != null) fields.add(label) else unnamedFields++
+            } else if (node.isClickable) {
+                if (label != null) buttons.add(label)
+            } else if (label != null) {
+                texts.add(label)
             }
         }
 
-        return ScreenSummary(
+        return ScreenReport(
+            packageName = snapshot.packageName,
             texts = texts.distinct(),
-            actions = actions.distinct(),
+            buttons = buttons.distinct(),
             fields = fields.distinct(),
             unnamedFields = unnamedFields
         )
@@ -83,8 +86,4 @@ object ScreenSummarizer {
         }
         return SpeechText(builder.toString(), truncated)
     }
-
-    // The visible name of an item: text, else description, else hint (never the short id).
-    private fun readableName(node: UiNode): String =
-        listOf(node.text, node.description, node.hint).firstOrNull { it.isNotBlank() }.orEmpty()
 }

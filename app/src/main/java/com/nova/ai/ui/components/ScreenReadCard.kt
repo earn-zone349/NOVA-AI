@@ -1,6 +1,5 @@
 package com.nova.ai.ui.components
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,9 +11,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -74,7 +71,7 @@ fun ScreenReadCard(
                 is ScreenReadState.Waiting ->
                     Text(text = stringResource(R.string.scr_waiting, state.secondsLeft))
                 is ScreenReadState.Failed -> Text(text = "⚠️ " + state.message)
-                is ScreenReadState.Done -> ReportContent(LocalContext.current, state)
+                is ScreenReadState.Done -> ReportContent(state)
             }
 
             if (state !is ScreenReadState.Idle) {
@@ -92,58 +89,31 @@ fun ScreenReadCard(
 }
 
 @Composable
-private fun ReportContent(context: Context, done: ScreenReadState.Done) {
-    val summary = done.summary
-    val appName: String = remember(done.appPackage) {
-        done.appPackage?.let { appLabelOf(context, it) } ?: ""
-    }
-
-    if (appName.isNotBlank()) {
-        Text(
-            text = stringResource(R.string.scr_app, appName),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
+private fun ReportContent(done: ScreenReadState.Done) {
+    val report = done.report
     Text(
         text = stringResource(
             R.string.scr_counts,
-            summary.texts.size,
-            summary.actions.size,
-            summary.fields.size + summary.unnamedFields
+            report.texts.size,
+            report.buttons.size,
+            report.fields.size + report.unnamedFields
         )
     )
-    Text(
-        text = stringResource(R.string.scr_stats, done.nodeCount, done.durationMs.toInt()),
-        style = MaterialTheme.typography.bodySmall
-    )
-    if (done.hiddenSensitive > 0) {
-        Text(
-            text = stringResource(R.string.scr_hidden, done.hiddenSensitive),
-            style = MaterialTheme.typography.bodySmall
-        )
-    }
     done.speakError?.let { message ->
         Text(text = "⚠️ " + stringResource(R.string.scr_speak_error, message))
     }
-    if (done.screenTruncated) {
-        Text(
-            text = stringResource(R.string.scr_screen_truncated),
-            style = MaterialTheme.typography.bodySmall
-        )
-    }
-    if (done.speechTruncated) {
+    if (done.truncated) {
         Text(
             text = stringResource(R.string.scr_truncated),
             style = MaterialTheme.typography.bodySmall
         )
     }
 
-    ReportSection(stringResource(R.string.scr_texts_title), summary.texts)
-    ReportSection(stringResource(R.string.scr_buttons_title), summary.actions)
-    ReportSection(stringResource(R.string.scr_fields_title), summary.fields)
-    if (summary.unnamedFields > 0) {
-        Text(text = stringResource(R.string.scr_unnamed_fields, summary.unnamedFields))
+    ReportSection(stringResource(R.string.scr_texts_title), report.texts)
+    ReportSection(stringResource(R.string.scr_buttons_title), report.buttons)
+    ReportSection(stringResource(R.string.scr_fields_title), report.fields)
+    if (report.unnamedFields > 0) {
+        Text(text = stringResource(R.string.scr_unnamed_fields, report.unnamedFields))
     }
 }
 
@@ -164,13 +134,4 @@ private fun ReportSection(title: String, items: List<String>) {
             style = MaterialTheme.typography.bodySmall
         )
     }
-}
-
-/** The name of an installed app, or its package name if the name cannot be read. */
-@Suppress("DEPRECATION")
-private fun appLabelOf(context: Context, packageName: String): String = try {
-    val manager = context.packageManager
-    manager.getApplicationLabel(manager.getApplicationInfo(packageName, 0)).toString()
-} catch (e: Exception) {
-    packageName
 }
