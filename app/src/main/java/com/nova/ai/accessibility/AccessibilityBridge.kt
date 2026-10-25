@@ -16,6 +16,8 @@ object AccessibilityBridge {
     // Windows of the system itself are not "apps the user switched to".
     private val IGNORED_PACKAGES: Set<String> = setOf("com.android.systemui")
 
+    private const val MSG_NOT_CONNECTED: String = "Accessibility সার্ভিস সংযুক্ত নেই।"
+
     @Volatile
     private var serviceRef: WeakReference<NovaAccessibilityService>? = null
 
@@ -53,11 +55,18 @@ object AccessibilityBridge {
     /** Performs a global action such as Home or Back (see AccessibilityService.GLOBAL_ACTION_*). */
     fun performGlobal(action: Int): NovaResult<Unit> {
         val current: NovaAccessibilityService = serviceRef?.get()
-            ?: return NovaResult.failure(ErrorCode.NOT_AVAILABLE, "Accessibility সার্ভিস সংযুক্ত নেই।")
+            ?: return NovaResult.failure(ErrorCode.NOT_AVAILABLE, MSG_NOT_CONNECTED)
         return if (current.performGlobalAction(action)) {
             NovaResult.Success(Unit)
         } else {
             NovaResult.failure(ErrorCode.EXECUTION_FAILED, "কাজটি করা যায়নি।")
         }
+    }
+
+    /** Reads everything visible on the screen now. Blocking: call from a background thread. */
+    fun readScreen(): NovaResult<ScreenCapture> {
+        val current: NovaAccessibilityService = serviceRef?.get()
+            ?: return NovaResult.failure(ErrorCode.NOT_AVAILABLE, MSG_NOT_CONNECTED)
+        return current.readActiveScreen()
     }
 }

@@ -3,11 +3,12 @@ package com.nova.ai.accessibility
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import com.nova.ai.core.NovaResult
 import com.nova.ai.logging.NovaLogger
 
 /**
- * NOVA's accessibility service. In this phase it only learns which app is in front.
- * Reading the screen, clicking, typing and scrolling are added in the next phases.
+ * NOVA's accessibility service. It learns which app is in front and can read what is
+ * visible on the screen. Clicking, typing and scrolling are added in the next phase.
  * It never logs or stores anything that appears on the screen.
  */
 class NovaAccessibilityService : AccessibilityService() {
@@ -38,6 +39,9 @@ class NovaAccessibilityService : AccessibilityService() {
         AccessibilityBridge.detach(this)
         super.onDestroy()
     }
+
+    /** Reads what is visible in the window the user is looking at now. */
+    fun readActiveScreen(): NovaResult<ScreenCapture> = ScreenReader.read(rootInActiveWindow)
 
     private companion object {
         const val TAG: String = "NovaAccessibility"

@@ -9,8 +9,7 @@ import java.util.Locale
  */
 object SensitiveNodePolicy {
 
-    /** What replaces a hidden code number. */
-    const val MASK: String = "••••"
+    private const val MASK: String = "••••"
 
     // Whole words only, so "spinner" or "pinterest" do not count as "pin".
     private val FIELD_KEYWORDS: Set<String> = setOf(

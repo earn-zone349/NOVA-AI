@@ -7,6 +7,7 @@ import com.nova.ai.R
 import com.nova.ai.ui.components.AppLibrarySection
 import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.components.SetupWizardCard
+import com.nova.ai.ui.components.ScreenReadLabCard
 
 /**
  * Access: the setup wizard (every permission with its reason and live status)
@@ -20,6 +21,7 @@ fun PermissionsScreen(modifier: Modifier = Modifier) {
         modifier = modifier
     ) {
         SetupWizardCard()
+        ScreenReadLabCard()
         AppLibrarySection()
     }
 }

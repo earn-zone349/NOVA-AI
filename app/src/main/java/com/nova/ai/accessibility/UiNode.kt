@@ -6,8 +6,7 @@ import com.nova.ai.core.ScreenBounds
  * One item on the screen (a text, button, input field...) as read by the accessibility service.
  * [path] lists the child positions from the top of the screen tree down to this item,
  * so the same item can be found again later (used for clicking in the next phase).
- * Input fields never carry typed text: [text] is always empty for them.
- * Sensitive fields also have an empty [description].
+ * Sensitive fields have empty [text] and [description].
  */
 data class UiNode(
     val id: Int,

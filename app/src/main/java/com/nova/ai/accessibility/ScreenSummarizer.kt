@@ -1,89 +1,40 @@
 package com.nova.ai.accessibility
 
-import com.nova.ai.core.ScreenNode
-import com.nova.ai.core.ScreenSnapshot
-
 /**
- * What is on the screen, sorted into three groups in reading order.
- * [unnamedFields] counts input fields that have no label.
+ * A short, readable summary of a screen: the texts, the things that can be clicked,
+ * and the input fields, each in top-to-bottom, left-to-right order.
+ * A blank entry in [fields] means a field without a name.
  */
-data class ScreenReport(
-    val packageName: String?,
+data class ScreenSummary(
     val texts: List<String>,
-    val buttons: List<String>,
-    val fields: List<String>,
-    val unnamedFields: Int
-) {
-    /** True when nothing readable was found. */
-    val isEmpty: Boolean
-        get() = texts.isEmpty() && buttons.isEmpty() && fields.isEmpty() && unnamedFields == 0
-}
+    val actions: List<String>,
+    val fields: List<String>
+)
 
-/** Text prepared for speaking. [truncated] is true if the end was cut off. */
-data class SpeechText(val text: String, val truncated: Boolean)
-
-/** Pure logic (no Android classes), so it is easy to test. */
+/** Builds a [ScreenSummary] from a [ScreenCapture]. Pure logic. */
 object ScreenSummarizer {
 
-    /** Speech engines refuse very long text; this keeps a safe margin. */
-    const val MAX_SPEECH_CHARS: Int = 1400
-
-    // Nodes whose tops are closer than this are treated as one visual row.
-    private const val ROW_BUCKET_PX: Int = 40
-    private const val SEPARATOR: String = ". "
-
-    /** Sorts the nodes of [snapshot] into texts, buttons and input fields. */
-    fun summarize(snapshot: ScreenSnapshot): ScreenReport {
-        val ordered: List<ScreenNode> = snapshot.nodes.sortedWith(
-            compareBy<ScreenNode>({ it.bounds.top / ROW_BUCKET_PX }, { it.bounds.left })
+    fun summarize(capture: ScreenCapture): ScreenSummary {
+        val ordered: List<UiNode> = capture.nodes.sortedWith(
+            compareBy<UiNode>({ it.bounds.top }, { it.bounds.left })
         )
 
-        val texts: MutableList<String> = ArrayList()
-        val buttons: MutableList<String> = ArrayList()
-        val fields: MutableList<String> = ArrayList()
-        var unnamedFields = 0
+        val texts: List<String> = ordered
+            .filter { !it.isEditable }
+            .map { it.text.ifBlank { it.description } }
+            .filter { it.isNotBlank() }
+            .distinct()
 
-        for (node in ordered) {
-            val label: String? = node.text ?: node.contentDescription
-            if (node.isEditable) {
-                if (label != null) fields.add(label) else unnamedFields++
-            } else if (node.isClickable) {
-                if (label != null) buttons.add(label)
-            } else if (label != null) {
-                texts.add(label)
-            }
-        }
+        val actions: List<String> = ordered
+            .filter { it.isClickable && it.isEnabled }
+            .map { it.label() }
+            .filter { it.isNotBlank() }
+            .distinct()
 
-        return ScreenReport(
-            packageName = snapshot.packageName,
-            texts = texts.distinct(),
-            buttons = buttons.distinct(),
-            fields = fields.distinct(),
-            unnamedFields = unnamedFields
-        )
-    }
+        val fields: List<String> = ordered
+            .filter { it.isEditable }
+            .map { it.label() }
 
-    /** Joins [parts] into one speakable text of at most [maxChars] characters. */
-    fun toSpeech(parts: List<String>, maxChars: Int = MAX_SPEECH_CHARS): SpeechText {
-        val builder = StringBuilder()
-        var truncated = false
-
-        for (part in parts) {
-            if (builder.isEmpty()) {
-                if (part.length > maxChars) {
-                    builder.append(part.take(maxChars))
-                    truncated = true
-                    break
-                }
-                builder.append(part)
-            } else {
-                if (builder.length + SEPARATOR.length + part.length > maxChars) {
-                    truncated = true
-                    break
-                }
-                builder.append(SEPARATOR).append(part)
-            }
-        }
-        return SpeechText(builder.toString(), truncated)
+        return ScreenSummary(texts = texts, actions = actions, fields = fields)
     }
 }
