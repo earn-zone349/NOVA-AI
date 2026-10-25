@@ -1,484 +1,580 @@
 #!/usr/bin/env bash
-# NOVA AI - Phase 18 setup script: screen reader (Accessibility tree: texts, buttons, input fields).
-# Additive: new classes in the accessibility package, one new Home card, new strings file.
-# HomeScreen gets a few additive lines only. Nothing from P1 to P17 is removed.
+# NOVA AI - Phase 18 setup script: screen reader (reads what is visible on the screen).
+# Additive: new reader classes and a test card; AccessibilityBridge and the service are
+# rewritten with every P17 feature kept; PermissionsScreen gets two additive lines.
 set -euo pipefail
 
 BASE="app/src/main/java/com/nova/ai"
-HOME_FILE="$BASE/ui/screens/HomeScreen.kt"
+PERMISSIONS_FILE="$BASE/ui/screens/PermissionsScreen.kt"
 
 for required in \
   "$BASE/accessibility/AccessibilityBridge.kt" \
   "$BASE/accessibility/NovaAccessibilityService.kt" \
-  "$BASE/setup/SetupChecker.kt" \
-  "$BASE/voice/LanguageDetector.kt" \
-  "$BASE/voice/LanguageMapping.kt" \
-  "$BASE/ui/components/SetupReminderCard.kt" \
-  "$HOME_FILE"; do
+  "$BASE/ui/components/SetupWizardCard.kt" \
+  "$BASE/core/Models.kt" \
+  "$PERMISSIONS_FILE"; do
   if [ ! -f "$required" ]; then
-    echo "ERROR: $required not found. Run from repo root after P1 to P17 are installed." >&2
+    echo "ERROR: $required not found. Run from repo root after P17 is installed." >&2
     exit 1
   fi
 done
 
 TMP_DIR="$(mktemp -d)"
-mkdir -p "$BASE/accessibility" "$BASE/ui/components" app/src/main/res/values
 
 # ---------- A. New strings file ----------
 cat > app/src/main/res/values/strings_p18.xml <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="scr_title">স্ক্রিন পড়া</string>
-    <string name="scr_note">অন্য অ্যাপের স্ক্রিনের লেখা, বাটন ও ইনপুট ঘর পড়ে শোনায়। \"৫ সেকেন্ড পর পড়ো\" চেপে যে অ্যাপের স্ক্রিন পড়াতে চাও সেখানে চলে যাও।</string>
-    <string name="scr_privacy">পাসওয়ার্ড ঘর এবং ঘরে টাইপ করা লেখা কখনো পড়া বা সেভ করা হয় না।</string>
-    <string name="scr_not_connected">Accessibility সার্ভিস সংযুক্ত নেই। Access ট্যাবে গিয়ে চালু করো।</string>
-
-    <string name="scr_read_delayed">৫ সেকেন্ড পর পড়ো</string>
-    <string name="scr_read_now">এখনই পড়ো</string>
-    <string name="scr_stop">থামাও</string>
-    <string name="scr_waiting">%1$d সেকেন্ড পরে স্ক্রিন পড়া হবে। এখন অন্য অ্যাপে যাও…</string>
-
-    <string name="scr_counts">লেখা: %1$d, বাটন: %2$d, ইনপুট ঘর: %3$d</string>
-    <string name="scr_texts_title">স্ক্রিনের লেখা</string>
-    <string name="scr_buttons_title">বাটন</string>
-    <string name="scr_fields_title">ইনপুট ঘর</string>
-    <string name="scr_more">…আরও %1$d টি</string>
-    <string name="scr_unnamed_fields">নামহীন ইনপুট ঘর: %1$d টি</string>
-    <string name="scr_truncated">লেখা অনেক লম্বা, তাই শুধু শুরুর অংশ বলা হয়েছে।</string>
-    <string name="scr_speak_error">বলতে সমস্যা: %1$s</string>
-
-    <string name="scr_empty">স্ক্রিনে পড়ার মতো কিছু পাওয়া যায়নি। কিছু অ্যাপ (যেমন ব্যাংকিং) স্ক্রিন পড়তে দেয় না।</string>
-    <string name="scr_failed">স্ক্রিন পড়তে সমস্যা হয়েছে।</string>
-
-    <string name="scr_intro_texts_bn">স্ক্রিনে লেখা আছে।</string>
-    <string name="scr_intro_buttons_bn">স্ক্রিনে এই বাটনগুলো আছে।</string>
-    <string name="scr_intro_texts_en">On the screen:</string>
-    <string name="scr_intro_buttons_en">Buttons on the screen:</string>
+    <string name="scr_title">স্ক্রিন পড়ার পরীক্ষা (P18)</string>
+    <string name="scr_note">নোভা স্ক্রিনে যা যা দেখা যায় তা পড়ে তালিকা বানায়। পাসওয়ার্ড, পিন ও OTP-জাতীয় ঘরের লেখা লুকানো থাকে। পড়া তথ্য ফোনেই থাকে, কোথাও সংরক্ষণ বা পাঠানো হয় না।</string>
+    <string name="scr_need_service">আগে ওপরের সেটআপে Accessibility চালু করো।</string>
+    <string name="scr_read_now">এখনকার স্ক্রিন পড়ো (নোভার নিজের)</string>
+    <string name="scr_read_later">৫ সেকেন্ড পরে পড়ো (এরপর অন্য অ্যাপ খোলো)</string>
+    <string name="scr_waiting">%1$d সেকেন্ড পরে স্ক্রিন পড়া হবে। এখন অন্য একটি অ্যাপ খোলো, তারপর নোভায় ফিরে এসো।</string>
+    <string name="scr_cancel">থামাও</string>
+    <string name="scr_header">অ্যাপ: %1$s</string>
+    <string name="scr_stats">দেখা গেছে: %1$d টি উপাদান, সময়: %2$d মিলিসেকেন্ড</string>
+    <string name="scr_truncated">স্ক্রিন বড় হওয়ায় শুধু প্রথম অংশ পড়া হয়েছে।</string>
+    <string name="scr_hidden">লুকানো সংবেদনশীল ঘর: %1$d টি</string>
+    <string name="scr_texts_title">দেখা লেখা (%1$d)</string>
+    <string name="scr_actions_title">ক্লিকযোগ্য (%1$d)</string>
+    <string name="scr_fields_title">লেখার ঘর (%1$d)</string>
+    <string name="scr_none">কিছু নেই</string>
+    <string name="scr_field_empty">(নামহীন ঘর)</string>
+    <string name="scr_error">পড়া যায়নি: %1$s</string>
 </resources>
 EOF
 
-# ---------- B. Reads the Accessibility tree into plain data ----------
-cat > "$BASE/accessibility/ScreenTreeReader.kt" <<'EOF'
+# ---------- 1. UiNode.kt ----------
+cat > "$BASE/accessibility/UiNode.kt" <<'EOF'
+package com.nova.ai.accessibility
+
+import com.nova.ai.core.ScreenBounds
+
+/**
+ * One item on the screen (a text, button, input field...) as read by the accessibility service.
+ * [path] lists the child positions from the top of the screen tree down to this item,
+ * so the same item can be found again later (used for clicking in the next phase).
+ * Sensitive fields have empty [text] and [description].
+ */
+data class UiNode(
+    val id: Int,
+    val depth: Int,
+    val path: List<Int>,
+    val text: String,
+    val description: String,
+    val hint: String,
+    val viewId: String,
+    val className: String,
+    val bounds: ScreenBounds,
+    val isClickable: Boolean,
+    val isLongClickable: Boolean,
+    val isEditable: Boolean,
+    val isScrollable: Boolean,
+    val isCheckable: Boolean,
+    val isChecked: Boolean,
+    val isEnabled: Boolean,
+    val isFocused: Boolean,
+    val isSensitive: Boolean
+) {
+    /** The best name for this item: its text, else its description, hint, or short id. */
+    fun label(): String =
+        listOf(text, description, hint).firstOrNull { it.isNotBlank() }
+            ?: viewId.substringAfterLast('/')
+}
+
+/** Everything visible on the screen at one moment. */
+data class ScreenCapture(
+    val packageName: String?,
+    val nodes: List<UiNode>,
+    val visitedCount: Int,
+    val truncated: Boolean,
+    val hiddenSensitiveCount: Int,
+    val capturedAtMs: Long,
+    val durationMs: Long
+)
+EOF
+
+# ---------- 2. SensitiveNodePolicy.kt ----------
+cat > "$BASE/accessibility/SensitiveNodePolicy.kt" <<'EOF'
+package com.nova.ai.accessibility
+
+import java.util.Locale
+
+/**
+ * Rules that keep secrets out of what NOVA reads: password fields, PIN and OTP
+ * fields, and code numbers inside messages. These are best-effort rules based on
+ * field names and nearby words; they are tightened in the security phase.
+ */
+object SensitiveNodePolicy {
+
+    private const val MASK: String = "••••"
+
+    // Whole words only, so "spinner" or "pinterest" do not count as "pin".
+    private val FIELD_KEYWORDS: Set<String> = setOf(
+        "password", "passcode", "passwd", "pwd", "pin", "otp", "cvv", "cvc", "secret",
+        "পাসওয়ার্ড", "পিন", "ওটিপি", "পাসকোড"
+    )
+
+    private val WORD_SPLIT: Regex = Regex("[^\\p{L}\\p{N}\\p{M}]+")
+    private val CODE_WORDS: Regex = Regex("(?i)(otp|pin|passcode|verification|code|ওটিপি|পিন|কোড|পাসকোড)")
+    private val DIGIT_RUN: Regex = Regex("[0-9০-৯]{4,8}")
+
+    /** True if an input field should never be read: password fields and PIN, OTP, CVV style fields. */
+    fun isSensitiveField(
+        isPassword: Boolean,
+        isEditable: Boolean,
+        viewId: String,
+        hint: String,
+        description: String
+    ): Boolean {
+        if (isPassword) return true
+        if (!isEditable) return false
+        return listOf(viewId, hint, description).any { source ->
+            WORD_SPLIT.split(source.lowercase(Locale.ROOT)).any { word -> word in FIELD_KEYWORDS }
+        }
+    }
+
+    /** Hides number groups of 4 to 8 digits when the text talks about a code, OTP or PIN. */
+    fun maskCodes(text: String): String {
+        if (text.isEmpty() || !CODE_WORDS.containsMatchIn(text)) return text
+        return DIGIT_RUN.replace(text, MASK)
+    }
+}
+EOF
+
+# ---------- 3. ScreenReader.kt ----------
+cat > "$BASE/accessibility/ScreenReader.kt" <<'EOF'
 package com.nova.ai.accessibility
 
 import android.graphics.Rect
+import android.os.Build
+import android.os.SystemClock
 import android.view.accessibility.AccessibilityNodeInfo
+import com.nova.ai.core.ErrorCode
+import com.nova.ai.core.NovaResult
 import com.nova.ai.core.ScreenBounds
-import com.nova.ai.core.ScreenNode
-import com.nova.ai.core.ScreenSnapshot
+import com.nova.ai.logging.NovaLogger
 
 /**
- * Walks the Accessibility tree of one window and turns it into plain [ScreenNode] data.
- *
- * Privacy rules (kept on purpose, later phases rely on them):
- *  - Password fields never give out any text.
- *  - Input fields never give out what the user typed. Only their label (hint or
- *    description) is kept, so NOVA can find the field without reading its content.
- *  - Nothing read here is logged or stored.
- *
- * The walk is limited in depth and node count, so a huge or broken screen cannot
- * freeze the app.
+ * Reads the screen tree given by the accessibility service and turns it into a list
+ * of [UiNode]. Only items the user can see are read. Plain layout boxes without
+ * text or actions are skipped. Reading is limited in size and depth so it stays fast.
+ * Nothing that is read is logged or stored.
  */
-object ScreenTreeReader {
+object ScreenReader {
 
-    /** Most nodes kept from one screen. */
-    const val MAX_NODES: Int = 400
+    private const val TAG: String = "ScreenReader"
+    private const val MAX_KEPT_NODES: Int = 600
+    private const val MAX_VISITED_NODES: Int = 3000
+    private const val MAX_DEPTH: Int = 60
+    private const val MAX_TEXT_LENGTH: Int = 200
 
-    private const val MAX_DEPTH: Int = 40
-    private const val MAX_LABEL_LENGTH: Int = 300
-    private val WHITESPACE: Regex = Regex("\\s+")
+    private const val MSG_UNAVAILABLE: String =
+        "স্ক্রিনের তথ্য পাওয়া যায়নি। অ্যাপটি পড়তে দিচ্ছে না, বা স্ক্রিন বদলাচ্ছে। আবার চেষ্টা করো।"
+    private const val MSG_FAILED: String = "স্ক্রিন পড়তে সমস্যা হয়েছে।"
 
-    /** Reads the tree below [root]. The caller owns [root] and must recycle it. */
-    fun read(root: AccessibilityNodeInfo, capturedAtMs: Long): ScreenSnapshot {
-        val nodes: MutableList<ScreenNode> = ArrayList()
-        walk(root, 0, nodes)
-        return ScreenSnapshot(
-            packageName = root.packageName?.toString(),
-            nodes = nodes,
-            capturedAtMs = capturedAtMs
-        )
+    /** Collects the nodes found while walking the tree. */
+    private class WalkState {
+        val nodes: MutableList<UiNode> = ArrayList()
+        var visited: Int = 0
+        var truncated: Boolean = false
+        var hiddenSensitive: Int = 0
     }
 
-    private fun walk(node: AccessibilityNodeInfo, depth: Int, out: MutableList<ScreenNode>) {
-        if (out.size >= MAX_NODES || depth > MAX_DEPTH) return
-        // Parts of the screen the user cannot see are not read.
-        if (!node.isVisibleToUser) return
+    /** Reads the screen below [root]. The root is released when reading is done. */
+    fun read(root: AccessibilityNodeInfo?): NovaResult<ScreenCapture> {
+        if (root == null) return NovaResult.failure(ErrorCode.NOT_AVAILABLE, MSG_UNAVAILABLE)
 
-        toScreenNode(node)?.let { out.add(it) }
+        val startedAtMs: Long = SystemClock.elapsedRealtime()
+        val state = WalkState()
+        return try {
+            val packageName: String? = root.packageName?.toString()
+            walk(root, depth = 0, path = emptyList(), state = state)
+            NovaResult.Success(
+                ScreenCapture(
+                    packageName = packageName,
+                    nodes = state.nodes,
+                    visitedCount = state.visited,
+                    truncated = state.truncated,
+                    hiddenSensitiveCount = state.hiddenSensitive,
+                    capturedAtMs = System.currentTimeMillis(),
+                    durationMs = SystemClock.elapsedRealtime() - startedAtMs
+                )
+            )
+        } catch (e: Exception) {
+            NovaLogger.e(TAG, "Failed to read the screen", e)
+            NovaResult.failure(ErrorCode.EXECUTION_FAILED, MSG_FAILED, e)
+        } finally {
+            recycleQuietly(root)
+        }
+    }
 
+    private fun walk(node: AccessibilityNodeInfo, depth: Int, path: List<Int>, state: WalkState) {
+        state.visited += 1
+
+        // Hidden parts (scrolled out of view, covered) are neither read nor entered.
+        if (depth > 0 && !node.isVisibleToUser) return
+
+        keepIfMeaningful(node, depth, path, state)
+
+        if (depth >= MAX_DEPTH) {
+            state.truncated = true
+            return
+        }
         for (index in 0 until node.childCount) {
-            if (out.size >= MAX_NODES) break
+            if (state.visited >= MAX_VISITED_NODES || state.nodes.size >= MAX_KEPT_NODES) {
+                state.truncated = true
+                return
+            }
             val child: AccessibilityNodeInfo = node.getChild(index) ?: continue
             try {
-                walk(child, depth + 1, out)
+                walk(child, depth + 1, path + index, state)
             } finally {
                 recycleQuietly(child)
             }
         }
     }
 
-    /** Returns null for nodes that carry nothing useful (empty layout containers). */
-    private fun toScreenNode(node: AccessibilityNodeInfo): ScreenNode? {
-        val isSecret: Boolean = node.isPassword
-        val isField: Boolean = node.isEditable
+    private fun keepIfMeaningful(
+        node: AccessibilityNodeInfo,
+        depth: Int,
+        path: List<Int>,
+        state: WalkState
+    ) {
+        val rawText: String = node.text?.toString().orEmpty()
+        val rawDescription: String = node.contentDescription?.toString().orEmpty()
+        val hint: String = node.hintText?.toString().orEmpty()
+        val viewId: String = node.viewIdResourceName.orEmpty()
+        val editable: Boolean = node.isEditable
+        val clickable: Boolean = node.isClickable
+        val longClickable: Boolean = node.isLongClickable
+        val scrollable: Boolean = node.isScrollable
+        val checkable: Boolean = node.isCheckable
 
-        val label: String? = when {
-            isSecret -> null
-            isField -> clean(node.hintText) ?: clean(node.contentDescription)
-            else -> clean(node.text)
-        }
-        val description: String? = when {
-            isSecret || isField -> null
-            else -> clean(node.contentDescription)
-        }
-
-        val isUseful: Boolean = label != null || description != null ||
-            node.isClickable || isField || node.isScrollable
-        if (!isUseful) return null
+        val meaningful: Boolean = rawText.isNotBlank() || rawDescription.isNotBlank() ||
+            hint.isNotBlank() || clickable || longClickable || editable || scrollable || checkable
+        if (!meaningful) return
 
         val rect = Rect()
         node.getBoundsInScreen(rect)
-        if (rect.isEmpty) return null
+        if (rect.isEmpty) return
 
-        return ScreenNode(
-            // For input fields the label travels in the description slot (never the typed text).
-            text = if (isField) null else label,
-            contentDescription = if (isField) label else description,
-            className = node.className?.toString(),
-            packageName = node.packageName?.toString(),
-            isClickable = node.isClickable,
-            isEditable = isField,
-            isScrollable = node.isScrollable,
-            bounds = ScreenBounds(rect.left, rect.top, rect.right, rect.bottom)
+        val sensitive: Boolean = SensitiveNodePolicy.isSensitiveField(
+            isPassword = node.isPassword,
+            isEditable = editable,
+            viewId = viewId,
+            hint = hint,
+            description = rawDescription
+        )
+        if (sensitive) state.hiddenSensitive += 1
+
+        val text: String = if (sensitive) "" else limit(SensitiveNodePolicy.maskCodes(rawText))
+        val description: String = if (sensitive) "" else limit(SensitiveNodePolicy.maskCodes(rawDescription))
+
+        state.nodes.add(
+            UiNode(
+                id = state.nodes.size,
+                depth = depth,
+                path = path,
+                text = text,
+                description = description,
+                hint = limit(hint),
+                viewId = viewId,
+                className = node.className?.toString().orEmpty(),
+                bounds = ScreenBounds(rect.left, rect.top, rect.right, rect.bottom),
+                isClickable = clickable,
+                isLongClickable = longClickable,
+                isEditable = editable,
+                isScrollable = scrollable,
+                isCheckable = checkable,
+                isChecked = node.isChecked,
+                isEnabled = node.isEnabled,
+                isFocused = node.isFocused,
+                isSensitive = sensitive
+            )
         )
     }
 
-    private fun clean(value: CharSequence?): String? {
-        val trimmed: String = value?.toString()?.replace(WHITESPACE, " ")?.trim() ?: return null
-        return if (trimmed.isEmpty()) null else trimmed.take(MAX_LABEL_LENGTH)
-    }
+    private fun limit(text: String): String =
+        if (text.length > MAX_TEXT_LENGTH) text.take(MAX_TEXT_LENGTH) + "…" else text
 
+    // Android 13 and newer recycle nodes by themselves; older versions need this call.
     @Suppress("DEPRECATION")
     private fun recycleQuietly(node: AccessibilityNodeInfo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
         try {
             node.recycle()
         } catch (e: Exception) {
-            // Recycling is only a memory courtesy; a failure here is harmless.
+            NovaLogger.w(TAG, "Failed to recycle a node", e)
         }
     }
 }
 EOF
 
-# ---------- C. Turns a snapshot into texts, buttons and fields (pure logic) ----------
+# ---------- 4. ScreenSummarizer.kt ----------
 cat > "$BASE/accessibility/ScreenSummarizer.kt" <<'EOF'
 package com.nova.ai.accessibility
 
-import com.nova.ai.core.ScreenNode
-import com.nova.ai.core.ScreenSnapshot
-
 /**
- * What is on the screen, sorted into three groups in reading order.
- * [unnamedFields] counts input fields that have no label.
+ * A short, readable summary of a screen: the texts, the things that can be clicked,
+ * and the input fields, each in top-to-bottom, left-to-right order.
+ * A blank entry in [fields] means a field without a name.
  */
-data class ScreenReport(
-    val packageName: String?,
+data class ScreenSummary(
     val texts: List<String>,
-    val buttons: List<String>,
-    val fields: List<String>,
-    val unnamedFields: Int
-) {
-    /** True when nothing readable was found. */
-    val isEmpty: Boolean
-        get() = texts.isEmpty() && buttons.isEmpty() && fields.isEmpty() && unnamedFields == 0
-}
+    val actions: List<String>,
+    val fields: List<String>
+)
 
-/** Text prepared for speaking. [truncated] is true if the end was cut off. */
-data class SpeechText(val text: String, val truncated: Boolean)
-
-/** Pure logic (no Android classes), so it is easy to test. */
+/** Builds a [ScreenSummary] from a [ScreenCapture]. Pure logic. */
 object ScreenSummarizer {
 
-    /** Speech engines refuse very long text; this keeps a safe margin. */
-    const val MAX_SPEECH_CHARS: Int = 1400
-
-    // Nodes whose tops are closer than this are treated as one visual row.
-    private const val ROW_BUCKET_PX: Int = 40
-    private const val SEPARATOR: String = ". "
-
-    /** Sorts the nodes of [snapshot] into texts, buttons and input fields. */
-    fun summarize(snapshot: ScreenSnapshot): ScreenReport {
-        val ordered: List<ScreenNode> = snapshot.nodes.sortedWith(
-            compareBy<ScreenNode>({ it.bounds.top / ROW_BUCKET_PX }, { it.bounds.left })
+    fun summarize(capture: ScreenCapture): ScreenSummary {
+        val ordered: List<UiNode> = capture.nodes.sortedWith(
+            compareBy<UiNode>({ it.bounds.top }, { it.bounds.left })
         )
 
-        val texts: MutableList<String> = ArrayList()
-        val buttons: MutableList<String> = ArrayList()
-        val fields: MutableList<String> = ArrayList()
-        var unnamedFields = 0
+        val texts: List<String> = ordered
+            .filter { !it.isEditable }
+            .map { it.text.ifBlank { it.description } }
+            .filter { it.isNotBlank() }
+            .distinct()
 
-        for (node in ordered) {
-            val label: String? = node.text ?: node.contentDescription
-            if (node.isEditable) {
-                if (label != null) fields.add(label) else unnamedFields++
-            } else if (node.isClickable) {
-                if (label != null) buttons.add(label)
-            } else if (label != null) {
-                texts.add(label)
-            }
-        }
+        val actions: List<String> = ordered
+            .filter { it.isClickable && it.isEnabled }
+            .map { it.label() }
+            .filter { it.isNotBlank() }
+            .distinct()
 
-        return ScreenReport(
-            packageName = snapshot.packageName,
-            texts = texts.distinct(),
-            buttons = buttons.distinct(),
-            fields = fields.distinct(),
-            unnamedFields = unnamedFields
-        )
-    }
+        val fields: List<String> = ordered
+            .filter { it.isEditable }
+            .map { it.label() }
 
-    /** Joins [parts] into one speakable text of at most [maxChars] characters. */
-    fun toSpeech(parts: List<String>, maxChars: Int = MAX_SPEECH_CHARS): SpeechText {
-        val builder = StringBuilder()
-        var truncated = false
-
-        for (part in parts) {
-            if (builder.isEmpty()) {
-                if (part.length > maxChars) {
-                    builder.append(part.take(maxChars))
-                    truncated = true
-                    break
-                }
-                builder.append(part)
-            } else {
-                if (builder.length + SEPARATOR.length + part.length > maxChars) {
-                    truncated = true
-                    break
-                }
-                builder.append(SEPARATOR).append(part)
-            }
-        }
-        return SpeechText(builder.toString(), truncated)
+        return ScreenSummary(texts = texts, actions = actions, fields = fields)
     }
 }
 EOF
 
-# ---------- D. Captures the screen in front through the running service ----------
-cat > "$BASE/accessibility/ScreenReader.kt" <<'EOF'
+# ---------- 5. ScreenReadLab.kt ----------
+cat > "$BASE/accessibility/ScreenReadLab.kt" <<'EOF'
 package com.nova.ai.accessibility
 
-import android.view.accessibility.AccessibilityNodeInfo
-import com.nova.ai.core.ErrorCode
-import com.nova.ai.core.NovaResult
-import com.nova.ai.core.ScreenSnapshot
-import com.nova.ai.logging.NovaLogger
-
-/**
- * Captures what is on the screen right now. Needs the accessibility service to be
- * connected. Never throws; every problem comes back as a [NovaResult.Failure].
- * Heavy: call from a background thread.
- */
-object ScreenReader {
-
-    private const val TAG: String = "ScreenReader"
-
-    /** Reads the window that is in front at this moment. */
-    fun capture(): NovaResult<ScreenSnapshot> {
-        val service: NovaAccessibilityService = AccessibilityBridge.service()
-            ?: return NovaResult.failure(
-                ErrorCode.NOT_AVAILABLE,
-                "Accessibility সার্ভিস সংযুক্ত নেই। Access ট্যাবে গিয়ে চালু করো।"
-            )
-
-        val root: AccessibilityNodeInfo? = fetchRoot(service)
-        if (root == null) {
-            return NovaResult.failure(
-                ErrorCode.TEMPORARY_FAILURE,
-                "স্ক্রিন এখন পড়া যাচ্ছে না। একটু পরে আবার চেষ্টা করো।"
-            )
-        }
-
-        return try {
-            NovaResult.Success(ScreenTreeReader.read(root, System.currentTimeMillis()))
-        } catch (e: Exception) {
-            NovaLogger.e(TAG, "Reading the screen failed", e)
-            NovaResult.failure(ErrorCode.EXECUTION_FAILED, "স্ক্রিন পড়তে সমস্যা হয়েছে।", e)
-        } finally {
-            recycleQuietly(root)
-        }
-    }
-
-    private fun fetchRoot(service: NovaAccessibilityService): AccessibilityNodeInfo? {
-        return try {
-            service.rootInActiveWindow
-        } catch (e: Exception) {
-            NovaLogger.e(TAG, "Could not get the active window", e)
-            null
-        }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun recycleQuietly(node: AccessibilityNodeInfo) {
-        try {
-            node.recycle()
-        } catch (e: Exception) {
-            // Harmless: recycling only returns memory to a pool.
-        }
-    }
-}
-EOF
-
-# ---------- E. Screen-side holder: countdown, capture, speak ----------
-cat > "$BASE/accessibility/ScreenReadController.kt" <<'EOF'
-package com.nova.ai.accessibility
-
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.nova.ai.R
-import com.nova.ai.core.Language
 import com.nova.ai.core.NovaResult
-import com.nova.ai.core.ScreenSnapshot
-import com.nova.ai.logging.NovaLogger
-import com.nova.ai.voice.LanguageDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** What the screen-reading card shows. */
-sealed interface ScreenReadState {
-    /** Nothing happening. */
-    object Idle : ScreenReadState
-
-    /** Counting down so the user can switch to the app to be read. */
-    data class Waiting(val secondsLeft: Int) : ScreenReadState
-
-    /** The screen was read. [speakError] is set if speaking it aloud failed. */
-    data class Done(
-        val report: ScreenReport,
-        val truncated: Boolean,
-        val speakError: String?
-    ) : ScreenReadState
-
-    /** Reading failed for the reason in [message]. */
-    data class Failed(val message: String) : ScreenReadState
-}
+/** The result shown in the test card: the raw capture and its summary. */
+data class ScreenReadResult(val capture: ScreenCapture, val summary: ScreenSummary)
 
 /**
- * Reads the screen in front and speaks it. Use from the main thread; the heavy
- * work runs on a background dispatcher. Screen content is only held in [state]
- * while the card is open and is never logged or stored.
- *
- * [speak] and [stopSpeaking] are given by the screen (its voice engine), so this
- * class has no dependency on how speech is produced.
+ * Runs the screen-reading test independently of any screen, so the countdown keeps
+ * going while the user opens another app. The test card reads [waitingSeconds],
+ * [result] and [errorMessage]. Use from the main thread.
  */
-class ScreenReadController(
-    context: Context,
-    private val scope: CoroutineScope,
-    private val defaultLanguage: () -> Language,
-    private val speak: (String, Language) -> NovaResult<Unit>,
-    private val stopSpeaking: () -> Unit
-) {
+object ScreenReadLab {
 
-    private val appContext: Context = context.applicationContext
+    private const val COUNTDOWN_SECONDS: Int = 5
+    private const val ONE_SECOND_MS: Long = 1000L
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var job: Job? = null
 
-    /** What the card should show right now. */
-    var state: ScreenReadState by mutableStateOf<ScreenReadState>(ScreenReadState.Idle)
+    /** Seconds left before the screen is read; 0 when no countdown is running. */
+    var waitingSeconds: Int by mutableStateOf(0)
         private set
 
-    /** Waits a few seconds (so the user can open another app), then reads the screen. */
-    fun readAfterDelay() {
-        job?.cancel()
+    /** The last successful reading. */
+    var result: ScreenReadResult? by mutableStateOf<ScreenReadResult?>(null)
+        private set
+
+    /** The problem of the last reading, if any. */
+    var errorMessage: String? by mutableStateOf<String?>(null)
+        private set
+
+    /** Reads the screen now. */
+    fun readNow() {
+        cancel()
+        job = scope.launch { readOnce() }
+    }
+
+    /** Reads the screen after a short countdown, so the user can open another app first. */
+    fun readAfterCountdown() {
+        cancel()
         job = scope.launch {
-            for (secondsLeft in DELAY_SECONDS downTo 1) {
-                state = ScreenReadState.Waiting(secondsLeft)
+            for (second in COUNTDOWN_SECONDS downTo 1) {
+                waitingSeconds = second
                 delay(ONE_SECOND_MS)
             }
-            captureAndSpeak()
+            waitingSeconds = 0
+            readOnce()
         }
     }
 
-    /** Reads the screen that is in front at this moment. */
-    fun readNow() {
-        job?.cancel()
-        job = scope.launch { captureAndSpeak() }
-    }
-
-    /** Cancels a countdown, stops speaking and clears the card. */
-    fun stop() {
+    /** Stops a running countdown. */
+    fun cancel() {
         job?.cancel()
         job = null
-        stopSpeaking()
-        state = ScreenReadState.Idle
+        waitingSeconds = 0
     }
 
-    private suspend fun captureAndSpeak() {
-        val result: NovaResult<ScreenSnapshot> = withContext(Dispatchers.Default) {
-            ScreenReader.capture()
+    private suspend fun readOnce() {
+        errorMessage = null
+        // Reading talks to the system many times, so it runs off the main thread.
+        val outcome: NovaResult<ScreenCapture> = withContext(Dispatchers.Default) {
+            AccessibilityBridge.readScreen()
         }
-        when (result) {
-            is NovaResult.Failure -> state = ScreenReadState.Failed(result.error.message)
-            is NovaResult.Success -> present(ScreenSummarizer.summarize(result.value))
+        when (outcome) {
+            is NovaResult.Success ->
+                result = ScreenReadResult(outcome.value, ScreenSummarizer.summarize(outcome.value))
+            is NovaResult.Failure -> errorMessage = outcome.error.message
         }
-    }
-
-    private fun present(report: ScreenReport) {
-        if (report.isEmpty) {
-            state = ScreenReadState.Failed(appContext.getString(R.string.scr_empty))
-            return
-        }
-        // Only counts are logged, never the content.
-        NovaLogger.i(
-            TAG,
-            "Screen read: texts=${report.texts.size} buttons=${report.buttons.size} " +
-                "fields=${report.fields.size + report.unnamedFields}"
-        )
-
-        // Speak the texts; if the screen has none, speak its buttons instead.
-        val readTexts: Boolean = report.texts.isNotEmpty()
-        val parts: List<String> = if (readTexts) report.texts else report.buttons
-        if (parts.isEmpty()) {
-            state = ScreenReadState.Done(report, truncated = false, speakError = null)
-            return
-        }
-
-        val detected: Language = LanguageDetector.detect(parts.joinToString(" "))
-        val language: Language = if (detected == Language.UNKNOWN) defaultLanguage() else detected
-        val speech: SpeechText = ScreenSummarizer.toSpeech(parts)
-        val spoken: String = introFor(language, readTexts) + " " + speech.text
-
-        val spoke: NovaResult<Unit> = speak(spoken, language)
-        val speakError: String? = (spoke as? NovaResult.Failure)?.error?.message
-        state = ScreenReadState.Done(report, speech.truncated, speakError)
-    }
-
-    private fun introFor(language: Language, readTexts: Boolean): String {
-        val english: Boolean = language == Language.ENGLISH
-        val resId: Int = when {
-            readTexts && english -> R.string.scr_intro_texts_en
-            readTexts -> R.string.scr_intro_texts_bn
-            english -> R.string.scr_intro_buttons_en
-            else -> R.string.scr_intro_buttons_bn
-        }
-        return appContext.getString(resId)
-    }
-
-    private companion object {
-        const val TAG: String = "ScreenReadController"
-        const val DELAY_SECONDS: Int = 5
-        const val ONE_SECOND_MS: Long = 1_000L
     }
 }
 EOF
 
-# ---------- F. Home card ----------
-cat > "$BASE/ui/components/ScreenReadCard.kt" <<'EOF'
+# ---------- 6. AccessibilityBridge.kt (all P17 features kept; screen reading added) ----------
+cat > "$BASE/accessibility/AccessibilityBridge.kt" <<'EOF'
+package com.nova.ai.accessibility
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.nova.ai.core.ErrorCode
+import com.nova.ai.core.NovaResult
+import java.lang.ref.WeakReference
+
+/**
+ * Connects the screens and engines of the app with the running accessibility service.
+ * The service registers itself here; everything else asks here instead of holding the service.
+ */
+object AccessibilityBridge {
+
+    // Windows of the system itself are not "apps the user switched to".
+    private val IGNORED_PACKAGES: Set<String> = setOf("com.android.systemui")
+
+    private const val MSG_NOT_CONNECTED: String = "Accessibility সার্ভিস সংযুক্ত নেই।"
+
+    @Volatile
+    private var serviceRef: WeakReference<NovaAccessibilityService>? = null
+
+    /** True while the service is running and connected. */
+    var isConnected: Boolean by mutableStateOf(false)
+        private set
+
+    /** The package of the last app, other than NOVA, that came to the front. */
+    var lastOtherPackage: String? by mutableStateOf<String?>(null)
+        private set
+
+    /** Called by the service when it connects. */
+    fun attach(service: NovaAccessibilityService) {
+        serviceRef = WeakReference(service)
+        isConnected = true
+    }
+
+    /** Called by the service when it stops. */
+    fun detach(service: NovaAccessibilityService) {
+        if (serviceRef?.get() === service) {
+            serviceRef = null
+            isConnected = false
+        }
+    }
+
+    /** Called by the service whenever a window comes to the front. */
+    fun onForegroundPackage(foregroundPackage: String, ownPackage: String) {
+        if (foregroundPackage == ownPackage || foregroundPackage in IGNORED_PACKAGES) return
+        lastOtherPackage = foregroundPackage
+    }
+
+    /** The running service, or null if it is not connected. */
+    fun service(): NovaAccessibilityService? = serviceRef?.get()
+
+    /** Performs a global action such as Home or Back (see AccessibilityService.GLOBAL_ACTION_*). */
+    fun performGlobal(action: Int): NovaResult<Unit> {
+        val current: NovaAccessibilityService = serviceRef?.get()
+            ?: return NovaResult.failure(ErrorCode.NOT_AVAILABLE, MSG_NOT_CONNECTED)
+        return if (current.performGlobalAction(action)) {
+            NovaResult.Success(Unit)
+        } else {
+            NovaResult.failure(ErrorCode.EXECUTION_FAILED, "কাজটি করা যায়নি।")
+        }
+    }
+
+    /** Reads everything visible on the screen now. Blocking: call from a background thread. */
+    fun readScreen(): NovaResult<ScreenCapture> {
+        val current: NovaAccessibilityService = serviceRef?.get()
+            ?: return NovaResult.failure(ErrorCode.NOT_AVAILABLE, MSG_NOT_CONNECTED)
+        return current.readActiveScreen()
+    }
+}
+EOF
+
+# ---------- 7. NovaAccessibilityService.kt (all P17 features kept; screen reading added) ----------
+cat > "$BASE/accessibility/NovaAccessibilityService.kt" <<'EOF'
+package com.nova.ai.accessibility
+
+import android.accessibilityservice.AccessibilityService
+import android.content.Intent
+import android.view.accessibility.AccessibilityEvent
+import com.nova.ai.core.NovaResult
+import com.nova.ai.logging.NovaLogger
+
+/**
+ * NOVA's accessibility service. It learns which app is in front and can read what is
+ * visible on the screen. Clicking, typing and scrolling are added in the next phase.
+ * It never logs or stores anything that appears on the screen.
+ */
+class NovaAccessibilityService : AccessibilityService() {
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        AccessibilityBridge.attach(this)
+        NovaLogger.i(TAG, "Accessibility service connected")
+    }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val eventPackage: String = event.packageName?.toString() ?: return
+        AccessibilityBridge.onForegroundPackage(eventPackage, packageName)
+    }
+
+    override fun onInterrupt() {
+        NovaLogger.i(TAG, "Accessibility service interrupted")
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        AccessibilityBridge.detach(this)
+        NovaLogger.i(TAG, "Accessibility service disconnected")
+        return super.onUnbind(intent)
+    }
+
+    override fun onDestroy() {
+        AccessibilityBridge.detach(this)
+        super.onDestroy()
+    }
+
+    /** Reads what is visible in the window the user is looking at now. */
+    fun readActiveScreen(): NovaResult<ScreenCapture> = ScreenReader.read(rootInActiveWindow)
+
+    private companion object {
+        const val TAG: String = "NovaAccessibility"
+    }
+}
+EOF
+
+# ---------- 8. ScreenReadLabCard.kt ----------
+cat > "$BASE/ui/components/ScreenReadLabCard.kt" <<'EOF'
 package com.nova.ai.ui.components
 
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -488,30 +584,32 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nova.ai.R
 import com.nova.ai.accessibility.AccessibilityBridge
-import com.nova.ai.accessibility.ScreenReadController
-import com.nova.ai.accessibility.ScreenReadState
+import com.nova.ai.accessibility.ScreenReadLab
+import com.nova.ai.accessibility.ScreenReadResult
 
-private const val MAX_ITEMS_SHOWN: Int = 40
+private const val SHOWN_TEXTS: Int = 20
+private const val SHOWN_ACTIONS: Int = 12
+private const val SHOWN_FIELDS: Int = 8
 
 /**
- * Lets the user have the screen in front read aloud and shows what was found:
- * texts, buttons and input fields.
+ * Test card for the screen reader: read NOVA's own screen at once, or read the
+ * screen of another app after a 5-second countdown, then see what was found.
  */
 @Composable
-fun ScreenReadCard(
-    controller: ScreenReadController,
-    modifier: Modifier = Modifier
-) {
+fun ScreenReadLabCard(modifier: Modifier = Modifier) {
+    val context: Context = LocalContext.current
     val connected: Boolean = AccessibilityBridge.isConnected
-    val state: ScreenReadState = controller.state
+    val waitingSeconds: Int = ScreenReadLab.waitingSeconds
+    val result: ScreenReadResult? = ScreenReadLab.result
+    val error: String? = ScreenReadLab.errorMessage
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(
@@ -526,147 +624,162 @@ fun ScreenReadCard(
                 text = stringResource(R.string.scr_note),
                 style = MaterialTheme.typography.bodySmall
             )
+
             if (!connected) {
-                Text(text = "🔐 " + stringResource(R.string.scr_not_connected))
+                Text(
+                    text = stringResource(R.string.scr_need_service),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Button(
-                onClick = { controller.readAfterDelay() },
-                enabled = connected && state !is ScreenReadState.Waiting,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(stringResource(R.string.scr_read_delayed))
-            }
-            OutlinedButton(
-                onClick = { controller.readNow() },
+                onClick = { ScreenReadLab.readNow() },
                 enabled = connected,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(stringResource(R.string.scr_read_now))
             }
 
-            when (state) {
-                ScreenReadState.Idle -> Unit
-                is ScreenReadState.Waiting ->
-                    Text(text = stringResource(R.string.scr_waiting, state.secondsLeft))
-                is ScreenReadState.Failed -> Text(text = "⚠️ " + state.message)
-                is ScreenReadState.Done -> ReportContent(state)
-            }
-
-            if (state !is ScreenReadState.Idle) {
-                TextButton(onClick = { controller.stop() }) {
-                    Text(stringResource(R.string.scr_stop))
+            if (waitingSeconds > 0) {
+                Text(text = stringResource(R.string.scr_waiting, waitingSeconds))
+                OutlinedButton(
+                    onClick = { ScreenReadLab.cancel() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.scr_cancel))
+                }
+            } else {
+                OutlinedButton(
+                    onClick = { ScreenReadLab.readAfterCountdown() },
+                    enabled = connected,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.scr_read_later))
                 }
             }
 
-            Text(
-                text = stringResource(R.string.scr_privacy),
-                style = MaterialTheme.typography.bodySmall
-            )
+            error?.let { message ->
+                Text(
+                    text = stringResource(R.string.scr_error, message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            result?.let { shown -> ScreenReadResultBlock(context, shown) }
         }
     }
 }
 
 @Composable
-private fun ReportContent(done: ScreenReadState.Done) {
-    val report = done.report
-    Text(
-        text = stringResource(
-            R.string.scr_counts,
-            report.texts.size,
-            report.buttons.size,
-            report.fields.size + report.unnamedFields
-        )
-    )
-    done.speakError?.let { message ->
-        Text(text = "⚠️ " + stringResource(R.string.scr_speak_error, message))
+private fun ScreenReadResultBlock(context: Context, shown: ScreenReadResult) {
+    val capture = shown.capture
+    val summary = shown.summary
+    val appName: String = remember(capture.packageName) {
+        capture.packageName?.let { appLabelOf(context, it) } ?: ""
     }
-    if (done.truncated) {
+    val emptyFieldLabel: String = stringResource(R.string.scr_field_empty)
+
+    Text(
+        text = stringResource(R.string.scr_header, appName),
+        style = MaterialTheme.typography.titleMedium
+    )
+    Text(
+        text = stringResource(R.string.scr_stats, capture.nodes.size, capture.durationMs.toInt()),
+        style = MaterialTheme.typography.bodySmall
+    )
+    if (capture.truncated) {
         Text(
             text = stringResource(R.string.scr_truncated),
             style = MaterialTheme.typography.bodySmall
         )
     }
-
-    ReportSection(stringResource(R.string.scr_texts_title), report.texts)
-    ReportSection(stringResource(R.string.scr_buttons_title), report.buttons)
-    ReportSection(stringResource(R.string.scr_fields_title), report.fields)
-    if (report.unnamedFields > 0) {
-        Text(text = stringResource(R.string.scr_unnamed_fields, report.unnamedFields))
+    if (capture.hiddenSensitiveCount > 0) {
+        Text(
+            text = stringResource(R.string.scr_hidden, capture.hiddenSensitiveCount),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
+
+    ListBlock(
+        title = stringResource(R.string.scr_texts_title, summary.texts.size),
+        items = summary.texts,
+        limit = SHOWN_TEXTS,
+        blankLabel = emptyFieldLabel
+    )
+    ListBlock(
+        title = stringResource(R.string.scr_actions_title, summary.actions.size),
+        items = summary.actions,
+        limit = SHOWN_ACTIONS,
+        blankLabel = emptyFieldLabel
+    )
+    ListBlock(
+        title = stringResource(R.string.scr_fields_title, summary.fields.size),
+        items = summary.fields,
+        limit = SHOWN_FIELDS,
+        blankLabel = emptyFieldLabel
+    )
 }
 
 @Composable
-private fun ReportSection(title: String, items: List<String>) {
-    if (items.isEmpty()) return
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.SemiBold
-    )
-    items.take(MAX_ITEMS_SHOWN).forEach { item ->
-        Text(text = "• $item", style = MaterialTheme.typography.bodyMedium)
-    }
-    if (items.size > MAX_ITEMS_SHOWN) {
+private fun ListBlock(title: String, items: List<String>, limit: Int, blankLabel: String) {
+    Text(text = title, style = MaterialTheme.typography.titleMedium)
+    if (items.isEmpty()) {
         Text(
-            text = stringResource(R.string.scr_more, items.size - MAX_ITEMS_SHOWN),
+            text = stringResource(R.string.scr_none),
+            style = MaterialTheme.typography.bodySmall
+        )
+        return
+    }
+    items.take(limit).forEach { item ->
+        Text(
+            text = "• " + item.ifBlank { blankLabel },
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+    if (items.size > limit) {
+        Text(
+            text = "… +${items.size - limit}",
             style = MaterialTheme.typography.bodySmall
         )
     }
 }
+
+/** The name of an installed app, or its package name if the name cannot be read. */
+@Suppress("DEPRECATION")
+private fun appLabelOf(context: Context, packageName: String): String = try {
+    val manager = context.packageManager
+    manager.getApplicationLabel(manager.getApplicationInfo(packageName, 0)).toString()
+} catch (e: Exception) {
+    packageName
+}
 EOF
 
-# ---------- G. HomeScreen: five additive lines ----------
-if ! grep -q "ScreenReadCard" "$HOME_FILE"; then
-  grep -q '^import com.nova.ai.ui.components.MediaActionCard$' "$HOME_FILE" \
-    || { echo "ERROR: HomeScreen anchor (import) not found" >&2; exit 1; }
-  grep -q '^    val mediaController: MediaCommandController = remember { MediaCommandController(context) }$' "$HOME_FILE" \
-    || { echo "ERROR: HomeScreen anchor (controller) not found" >&2; exit 1; }
-  grep -q '^        MediaActionCard(controller = mediaController)$' "$HOME_FILE" \
-    || { echo "ERROR: HomeScreen anchor (card) not found" >&2; exit 1; }
-  grep -q '^            systemController.release()$' "$HOME_FILE" \
-    || { echo "ERROR: HomeScreen anchor (release) not found" >&2; exit 1; }
+# ---------- B. PermissionsScreen.kt: two additive lines (idempotent) ----------
+if ! grep -q "ScreenReadLabCard" "$PERMISSIONS_FILE"; then
+  grep -q '^import com.nova.ai.ui.components.SetupWizardCard$' "$PERMISSIONS_FILE" \
+    || { echo "ERROR: PermissionsScreen anchor (import) not found" >&2; exit 1; }
+  grep -q '^        SetupWizardCard()$' "$PERMISSIONS_FILE" \
+    || { echo "ERROR: PermissionsScreen anchor (card) not found" >&2; exit 1; }
 
-  cat > "$TMP_DIR/home_import.txt" <<'EOF'
-import com.nova.ai.ui.components.ScreenReadCard
-import com.nova.ai.accessibility.ScreenReadController
+  cat > "$TMP_DIR/perm_import.txt" <<'EOF'
+import com.nova.ai.ui.components.ScreenReadLabCard
 EOF
-  cat > "$TMP_DIR/home_controller.txt" <<'EOF'
-
-    // Reads the text, buttons and input fields of the screen in front, and speaks them.
-    val screenReadController: ScreenReadController = remember {
-        ScreenReadController(
-            context = context,
-            scope = scope,
-            defaultLanguage = { currentLanguage.toSpeechLanguage() },
-            speak = { text, language -> voiceEngine.speak(text, language) },
-            stopSpeaking = { voiceEngine.stopSpeaking() }
-        )
-    }
+  cat > "$TMP_DIR/perm_card.txt" <<'EOF'
+        ScreenReadLabCard()
 EOF
-  cat > "$TMP_DIR/home_card.txt" <<'EOF'
-
-        ScreenReadCard(controller = screenReadController)
-EOF
-  cat > "$TMP_DIR/home_release.txt" <<'EOF'
-            screenReadController.stop()
-EOF
-
-  sed -i "/^import com.nova.ai.ui.components.MediaActionCard$/r $TMP_DIR/home_import.txt" "$HOME_FILE"
-  sed -i "/^    val mediaController: MediaCommandController = remember { MediaCommandController(context) }$/r $TMP_DIR/home_controller.txt" "$HOME_FILE"
-  sed -i "/^        MediaActionCard(controller = mediaController)$/r $TMP_DIR/home_card.txt" "$HOME_FILE"
-  sed -i "/^            systemController.release()$/r $TMP_DIR/home_release.txt" "$HOME_FILE"
+  sed -i "/^import com.nova.ai.ui.components.SetupWizardCard$/r $TMP_DIR/perm_import.txt" "$PERMISSIONS_FILE"
+  sed -i "/^        SetupWizardCard()$/r $TMP_DIR/perm_card.txt" "$PERMISSIONS_FILE"
 fi
-grep -q "^import com.nova.ai.ui.components.ScreenReadCard$" "$HOME_FILE" || { echo "ERROR: HomeScreen edit failed (card import)" >&2; exit 1; }
-grep -q "^import com.nova.ai.accessibility.ScreenReadController$" "$HOME_FILE" || { echo "ERROR: HomeScreen edit failed (controller import)" >&2; exit 1; }
-grep -q "^    val screenReadController: ScreenReadController = remember {$" "$HOME_FILE" || { echo "ERROR: HomeScreen edit failed (controller)" >&2; exit 1; }
-grep -q "^        ScreenReadCard(controller = screenReadController)$" "$HOME_FILE" || { echo "ERROR: HomeScreen edit failed (card)" >&2; exit 1; }
-grep -q "^            screenReadController.stop()$" "$HOME_FILE" || { echo "ERROR: HomeScreen edit failed (release)" >&2; exit 1; }
+grep -q "^import com.nova.ai.ui.components.ScreenReadLabCard$" "$PERMISSIONS_FILE" || { echo "ERROR: PermissionsScreen edit failed (import)" >&2; exit 1; }
+grep -q "^        ScreenReadLabCard()$" "$PERMISSIONS_FILE" || { echo "ERROR: PermissionsScreen edit failed (card)" >&2; exit 1; }
 
 rm -rf "$TMP_DIR"
 
 # ---------- Commit and push ----------
 git add -A
-git commit -m "P18: screen reader (accessibility tree: texts, buttons, input fields) with spoken output"
+git commit -m "P18: screen reader (visible items, sensitive fields hidden) and test card"
 git push
-echo "P18 done. Wait for the GitHub Actions build, install the APK and test the Home card."
+
+echo "P18 files created and pushed."
