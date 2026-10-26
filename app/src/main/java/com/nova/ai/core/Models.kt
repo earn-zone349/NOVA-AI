@@ -50,7 +50,9 @@ data class TaskStep(
     val action: StepAction,
     val target: String? = null,
     val value: String? = null,
-    val requiresConfirmation: Boolean = false
+    val requiresConfirmation: Boolean = false,
+    val expected: ExpectedOutcome = ExpectedOutcome.SCREEN_CHANGES,
+    val expectedValue: String? = null
 )
 
 /** Ordered list of steps that fulfils one intent. */

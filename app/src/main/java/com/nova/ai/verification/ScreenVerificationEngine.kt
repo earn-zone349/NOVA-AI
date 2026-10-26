@@ -2,6 +2,7 @@ package com.nova.ai.verification
 
 import com.nova.ai.accessibility.SensitiveNodePolicy
 import com.nova.ai.core.ErrorCode
+import com.nova.ai.core.ExpectedOutcome
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.ScreenNode
 import com.nova.ai.core.ScreenSnapshot
@@ -12,11 +13,12 @@ import com.nova.ai.logging.NovaLogger
 
 /**
  * The real [VerificationEngine]. After a step it looks at the screen again and decides whether
- * the step really did something: a click, scroll, Back, Home or app start must change the screen,
- * and typed text must show up in a text field. Texts of the screen are never logged.
- *
- * Limit: a step that changes nothing visible (for example a click on a button that only
- * plays a sound) is reported as not verified. The caller decides what to do with that.
+ * the step really did what it was expected to do ([TaskStep.expected]):
+ * - [ExpectedOutcome.SCREEN_CHANGES] (the default): the screen is different from before.
+ * - [ExpectedOutcome.NO_CHANGE_EXPECTED]: nothing needs to change, the step passes.
+ * - [ExpectedOutcome.TEXT_VISIBLE]: the text in [TaskStep.expectedValue] is on the screen.
+ * - [ExpectedOutcome.APP_IN_FRONT]: the app in [TaskStep.expectedValue] is in front.
+ * Typed text ([StepAction.TYPE_TEXT]) must show up in a text field. Texts of the screen are never logged.
  */
 class ScreenVerificationEngine : VerificationEngine {
 
@@ -34,39 +36,65 @@ class ScreenVerificationEngine : VerificationEngine {
     private fun decide(step: TaskStep, before: ScreenSnapshot?, after: ScreenSnapshot?): VerificationReport {
         if (after == null) return report(step, false, MSG_NO_AFTER)
         return when (step.action) {
-            StepAction.CLICK, StepAction.SCROLL, StepAction.BACK, StepAction.HOME ->
-                expectChange(step, before, after, MSG_SCREEN_CHANGED, MSG_SCREEN_SAME)
-            StepAction.OPEN_APP -> expectChange(step, before, after, MSG_APP_OPENED, MSG_APP_SAME)
-            StepAction.TYPE_TEXT -> expectText(step, after)
+            StepAction.CLICK, StepAction.SCROLL, StepAction.BACK, StepAction.HOME, StepAction.OPEN_APP ->
+                expectOutcome(step, before, after)
+            StepAction.TYPE_TEXT -> expectTyped(step, after)
             StepAction.WAIT, StepAction.CONFIRM, StepAction.SPEAK ->
                 report(step, true, MSG_NOTHING_TO_CHECK)
         }
     }
 
-    private fun expectChange(
-        step: TaskStep,
-        before: ScreenSnapshot?,
-        after: ScreenSnapshot,
-        passedMessage: String,
-        failedMessage: String
-    ): VerificationReport {
+    private fun expectOutcome(step: TaskStep, before: ScreenSnapshot?, after: ScreenSnapshot): VerificationReport =
+        when (step.expected) {
+            ExpectedOutcome.SCREEN_CHANGES -> expectChange(step, before, after)
+            ExpectedOutcome.NO_CHANGE_EXPECTED -> report(step, true, MSG_NO_CHANGE_OK)
+            ExpectedOutcome.TEXT_VISIBLE -> expectVisibleText(step, after)
+            ExpectedOutcome.APP_IN_FRONT -> expectApp(step, after)
+        }
+
+    private fun expectChange(step: TaskStep, before: ScreenSnapshot?, after: ScreenSnapshot): VerificationReport {
         if (before == null) return report(step, false, MSG_NO_BEFORE)
         val changed: Boolean = ScreenDiff.packageChanged(before, after) ||
             ScreenDiff.changedNodeCount(before, after) >= MIN_CHANGED_NODES
-        return if (changed) report(step, true, passedMessage) else report(step, false, failedMessage)
+        val opensApp: Boolean = step.action == StepAction.OPEN_APP
+        return when {
+            changed && opensApp -> report(step, true, MSG_APP_OPENED)
+            changed -> report(step, true, MSG_SCREEN_CHANGED)
+            opensApp -> report(step, false, MSG_APP_SAME)
+            else -> report(step, false, MSG_SCREEN_SAME)
+        }
     }
 
-    private fun expectText(step: TaskStep, after: ScreenSnapshot): VerificationReport {
+    // The text must be on the screen outside of input fields, so a typed search word in the
+    // search box does not count as "the results page is open".
+    private fun expectVisibleText(step: TaskStep, after: ScreenSnapshot): VerificationReport {
+        val value: String = step.expectedValue.orEmpty()
+        if (value.isBlank()) return report(step, false, MSG_NO_EXPECTED_VALUE)
+        val expected: String = tidy(SensitiveNodePolicy.maskCodes(value))
+        val found: Boolean = after.nodes.any { node -> !node.isEditable && showsText(node, expected) }
+        return if (found) report(step, true, MSG_TEXT_SHOWN) else report(step, false, MSG_TEXT_NOT_SHOWN)
+    }
+
+    private fun expectApp(step: TaskStep, after: ScreenSnapshot): VerificationReport {
+        val expectedPackage: String = step.expectedValue.orEmpty().trim()
+        if (expectedPackage.isEmpty()) return report(step, false, MSG_NO_EXPECTED_VALUE)
+        val inFront: Boolean = after.packageName == expectedPackage
+        return if (inFront) report(step, true, MSG_APP_OPENED) else report(step, false, MSG_APP_SAME)
+    }
+
+    private fun expectTyped(step: TaskStep, after: ScreenSnapshot): VerificationReport {
         val value: String = step.value.orEmpty()
         if (value.isBlank()) return report(step, false, MSG_NO_TEXT)
         // The screen reader hides code-like digits, so the expected text is hidden the same way.
         val expected: String = tidy(SensitiveNodePolicy.maskCodes(value))
-        val found: Boolean = after.nodes.any { node -> isFieldWith(node, expected) }
+        val found: Boolean = after.nodes.any { node -> node.isEditable && tidy(node.text.orEmpty()).contains(expected) }
         return if (found) report(step, true, MSG_TEXT_FOUND) else report(step, false, MSG_TEXT_MISSING)
     }
 
-    private fun isFieldWith(node: ScreenNode, expected: String): Boolean =
-        node.isEditable && tidy(node.text.orEmpty()).contains(expected)
+    private fun showsText(node: ScreenNode, expected: String): Boolean =
+        listOf(node.text, node.contentDescription).any { label ->
+            tidy(label.orEmpty()).contains(expected, ignoreCase = true)
+        }
 
     private fun tidy(text: String): String = text.trim().replace(WHITESPACE, " ")
 
@@ -84,6 +112,10 @@ class ScreenVerificationEngine : VerificationEngine {
         const val MSG_SCREEN_SAME: String = "স্ক্রিন বদলায়নি। কাজটা হয়নি বলে মনে হচ্ছে।"
         const val MSG_APP_OPENED: String = "অ্যাপ খুলেছে।"
         const val MSG_APP_SAME: String = "অ্যাপ খোলার কোনো চিহ্ন দেখা যায়নি।"
+        const val MSG_NO_CHANGE_OK: String = "স্ক্রিন না বদলানোই প্রত্যাশিত ছিল।"
+        const val MSG_TEXT_SHOWN: String = "প্রত্যাশিত লেখা স্ক্রিনে দেখা যাচ্ছে।"
+        const val MSG_TEXT_NOT_SHOWN: String = "প্রত্যাশিত লেখা স্ক্রিনে দেখা গেল না।"
+        const val MSG_NO_EXPECTED_VALUE: String = "কী দেখার কথা তা জানা নেই।"
         const val MSG_TEXT_FOUND: String = "লেখাটা ঘরে দেখা যাচ্ছে।"
         const val MSG_TEXT_MISSING: String = "লেখাটা কোনো ঘরে দেখা গেল না।"
         const val MSG_NO_TEXT: String = "কী লেখার কথা তা জানা নেই।"

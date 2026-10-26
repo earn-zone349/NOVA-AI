@@ -40,3 +40,6 @@ jobs:
           name: nova-ai-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --stacktrace
