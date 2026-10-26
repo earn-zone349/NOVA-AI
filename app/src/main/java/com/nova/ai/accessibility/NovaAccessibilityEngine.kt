@@ -44,7 +44,8 @@ class NovaAccessibilityEngine : AccessibilityEngine {
                 isClickable = item.isClickable,
                 isEditable = item.isEditable,
                 isScrollable = item.isScrollable,
-                bounds = item.bounds
+                bounds = item.bounds,
+                isChecked = item.isChecked
             )
         },
         capturedAtMs = capture.capturedAtMs

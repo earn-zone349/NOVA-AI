@@ -83,7 +83,8 @@ data class ScreenNode(
     val isClickable: Boolean,
     val isEditable: Boolean,
     val isScrollable: Boolean,
-    val bounds: ScreenBounds
+    val bounds: ScreenBounds,
+    val isChecked: Boolean = false
 )
 
 /** Snapshot of everything currently visible on screen. */

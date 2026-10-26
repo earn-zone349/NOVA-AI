@@ -8,6 +8,9 @@ import com.nova.ai.R
 import com.nova.ai.core.ErrorCode
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.ScrollDirection
+import com.nova.ai.core.StepAction
+import com.nova.ai.core.TaskStep
+import com.nova.ai.verification.VerifiedStepRunner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,8 +50,19 @@ object ActionLab {
     var message: ActionLabMessage? by mutableStateOf<ActionLabMessage?>(null)
         private set
 
-    /** Runs [action]; with [delayed] it first waits 5 seconds so the user can open another app. */
-    fun run(context: Context, action: LabAction, query: String, text: String, delayed: Boolean) {
+    /**
+     * Runs [action]; with [delayed] it first waits 5 seconds so the user can open another app.
+     * With [verify] a click, typing, scroll, Back or Home is checked afterwards: the screen must
+     * show that it worked, otherwise the result line says it failed.
+     */
+    fun run(
+        context: Context,
+        action: LabAction,
+        query: String,
+        text: String,
+        delayed: Boolean,
+        verify: Boolean = false
+    ) {
         cancel()
         val appContext: Context = context.applicationContext
         job = scope.launch {
@@ -61,7 +75,7 @@ object ActionLab {
             }
             // Reading and acting talk to the system many times, so they run off the main thread.
             val outcome: NovaResult<String> = withContext(Dispatchers.Default) {
-                perform(appContext, action, query.trim(), text)
+                perform(appContext, action, query.trim(), text, verify)
             }
             message = when (outcome) {
                 is NovaResult.Success -> ActionLabMessage(outcome.value, true)
@@ -80,16 +94,32 @@ object ActionLab {
         waitingSeconds = 0
     }
 
-    private fun perform(context: Context, action: LabAction, query: String, text: String): NovaResult<String> =
+    private fun perform(
+        context: Context,
+        action: LabAction,
+        query: String,
+        text: String,
+        verify: Boolean
+    ): NovaResult<String> =
         when (action) {
-            LabAction.CLICK -> clickByName(context, query)
-            LabAction.TYPE -> typeByName(context, query, text)
-            LabAction.SCROLL_UP ->
-                AccessibilityBridge.scroll(ScrollDirection.UP).map { context.getString(R.string.act_ok_scroll_up) }
-            LabAction.SCROLL_DOWN ->
-                AccessibilityBridge.scroll(ScrollDirection.DOWN).map { context.getString(R.string.act_ok_scroll_down) }
-            LabAction.BACK -> AccessibilityBridge.pressBack().map { context.getString(R.string.act_ok_back) }
-            LabAction.HOME -> AccessibilityBridge.pressHome().map { context.getString(R.string.act_ok_home) }
+            LabAction.CLICK -> clickByName(context, query, verify)
+            LabAction.TYPE -> typeByName(context, query, text, verify)
+            LabAction.SCROLL_UP -> checked(
+                context, verify, TaskStep("lab-scroll-up", StepAction.SCROLL, value = "UP"),
+                context.getString(R.string.act_ok_scroll_up)
+            ) { AccessibilityBridge.scroll(ScrollDirection.UP) }
+            LabAction.SCROLL_DOWN -> checked(
+                context, verify, TaskStep("lab-scroll-down", StepAction.SCROLL, value = "DOWN"),
+                context.getString(R.string.act_ok_scroll_down)
+            ) { AccessibilityBridge.scroll(ScrollDirection.DOWN) }
+            LabAction.BACK -> checked(
+                context, verify, TaskStep("lab-back", StepAction.BACK),
+                context.getString(R.string.act_ok_back)
+            ) { AccessibilityBridge.pressBack() }
+            LabAction.HOME -> checked(
+                context, verify, TaskStep("lab-home", StepAction.HOME),
+                context.getString(R.string.act_ok_home)
+            ) { AccessibilityBridge.pressHome() }
             LabAction.RECENTS -> AccessibilityBridge.openRecents().map { context.getString(R.string.act_ok_recents) }
             LabAction.SWIPE_UP ->
                 AccessibilityBridge.swipe(SwipeDirection.UP).map { context.getString(R.string.gst_ok_swipe_up) }
@@ -126,13 +156,36 @@ object ActionLab {
         return NovaResult.Success(node)
     }
 
-    private fun clickByName(context: Context, query: String): NovaResult<String> {
+    private fun clickByName(context: Context, query: String, verify: Boolean): NovaResult<String> {
         val node: UiNode = when (val found = findNodeByName(context, query)) {
             is NovaResult.Success -> found.value
             is NovaResult.Failure -> return found
         }
-        return AccessibilityBridge.click(node.toTarget())
-            .map { context.getString(R.string.act_ok_click, node.label()) }
+        return checked(
+            context, verify, TaskStep("lab-click", StepAction.CLICK, target = node.label()),
+            context.getString(R.string.act_ok_click, node.label())
+        ) { AccessibilityBridge.click(node.toTarget()) }
+    }
+
+    // Runs [action]. With [verify] the screen is checked afterwards and a step that did not show
+    // any effect becomes a failure that says so; without it the action result is used as it is.
+    private fun checked(
+        context: Context,
+        verify: Boolean,
+        step: TaskStep,
+        okMessage: String,
+        action: () -> NovaResult<Unit>
+    ): NovaResult<String> {
+        if (!verify) return action().map { okMessage }
+        return when (val outcome = VerifiedStepRunner(NovaAccessibilityEngine()).run(step, action)) {
+            is NovaResult.Failure -> outcome
+            is NovaResult.Success ->
+                if (outcome.value.passed) {
+                    NovaResult.Success(context.getString(R.string.ver_ok, okMessage, outcome.value.detail))
+                } else {
+                    NovaResult.failure(ErrorCode.EXECUTION_FAILED, outcome.value.detail)
+                }
+        }
     }
 
     private fun longPressByName(context: Context, query: String): NovaResult<String> {
@@ -153,7 +206,7 @@ object ActionLab {
             .map { context.getString(R.string.gst_ok_double_tap, node.label()) }
     }
 
-    private fun typeByName(context: Context, query: String, text: String): NovaResult<String> {
+    private fun typeByName(context: Context, query: String, text: String, verify: Boolean): NovaResult<String> {
         if (text.isEmpty()) {
             return NovaResult.failure(ErrorCode.INVALID_INPUT, context.getString(R.string.act_need_text))
         }
@@ -174,6 +227,9 @@ object ActionLab {
         } else {
             context.getString(R.string.act_ok_type, node.label())
         }
-        return AccessibilityBridge.typeText(node.toTarget(), text, append = false).map { message }
+        return checked(
+            context, verify, TaskStep("lab-type", StepAction.TYPE_TEXT, target = node.label(), value = text),
+            message
+        ) { AccessibilityBridge.typeText(node.toTarget(), text, append = false) }
     }
 }

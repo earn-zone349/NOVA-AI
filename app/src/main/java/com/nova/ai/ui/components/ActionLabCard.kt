@@ -35,7 +35,8 @@ import com.nova.ai.accessibility.LabAction
  * Test card for NOVA's hands: click a button by its name, type into a field, scroll,
  * press Back, Home or recent apps, and make finger gestures (swipe, long press, double tap,
  * pinch, two-finger swipe). With the 5-second option the action runs after a countdown,
- * so it can be tested on another app. Also tests the emergency stop.
+ * so it can be tested on another app. With the check option, a click, typing, scroll, Back or
+ * Home is verified on the screen afterwards. Also tests the emergency stop.
  */
 @Composable
 fun ActionLabCard(modifier: Modifier = Modifier) {
@@ -48,9 +49,10 @@ fun ActionLabCard(modifier: Modifier = Modifier) {
     var query: String by rememberSaveable { mutableStateOf("") }
     var typed: String by rememberSaveable { mutableStateOf("") }
     var delayed: Boolean by rememberSaveable { mutableStateOf(false) }
+    var verify: Boolean by rememberSaveable { mutableStateOf(false) }
 
     fun run(action: LabAction) {
-        ActionLab.run(context, action, query, typed, delayed)
+        ActionLab.run(context, action, query, typed, delayed, verify)
     }
 
     Card(modifier = modifier.fillMaxWidth()) {
@@ -100,6 +102,19 @@ fun ActionLabCard(modifier: Modifier = Modifier) {
                     modifier = Modifier.weight(1f)
                 )
                 Switch(checked = delayed, onCheckedChange = { delayed = it })
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.ver_label),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(checked = verify, onCheckedChange = { verify = it })
             }
 
             if (waitingSeconds > 0) {

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ver_label">কাজের পর স্ক্রিন দেখে যাচাই করো (ক্লিক, লেখা, স্ক্রল, Back, Home)</string>
+    <string name="ver_ok">%1$s (যাচাই: %2$s)</string>
+</resources>
