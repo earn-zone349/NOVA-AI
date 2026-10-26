@@ -98,6 +98,36 @@ object AccessibilityBridge {
     fun openQuickSettings(): NovaResult<Unit> =
         performGlobal(AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
 
+    // ---------------------------------------------------------------- gestures (P20)
+
+    /** Swipes with one finger in [direction]; the finger covers [distanceFraction] of the screen side. */
+    fun swipe(
+        direction: SwipeDirection,
+        distanceFraction: Float = GestureGeometry.DEFAULT_SWIPE_FRACTION
+    ): NovaResult<Unit> = withService { service ->
+        GestureActions.swipe(service, direction, distanceFraction, GestureGeometry.DEFAULT_SWIPE_DURATION_MS)
+    }
+
+    /** Swipes with two fingers side by side in [direction]. */
+    fun twoFingerSwipe(
+        direction: SwipeDirection,
+        distanceFraction: Float = GestureGeometry.DEFAULT_SWIPE_FRACTION
+    ): NovaResult<Unit> = withService { service ->
+        GestureActions.twoFingerSwipe(service, direction, distanceFraction, GestureGeometry.DEFAULT_SWIPE_DURATION_MS)
+    }
+
+    /** Long-presses the item described by [target]. */
+    fun longPress(target: NodeTarget): NovaResult<Unit> =
+        withService { service -> GestureActions.longPress(service, target) }
+
+    /** Double-taps the item described by [target]. */
+    fun doubleTap(target: NodeTarget): NovaResult<Unit> =
+        withService { service -> GestureActions.doubleTap(service, target) }
+
+    /** Zooms with two fingers around the middle of the screen. */
+    fun pinch(mode: PinchMode): NovaResult<Unit> =
+        withService { service -> GestureActions.pinch(service, mode) }
+
     private inline fun withService(
         block: (NovaAccessibilityService) -> NovaResult<Unit>
     ): NovaResult<Unit> {

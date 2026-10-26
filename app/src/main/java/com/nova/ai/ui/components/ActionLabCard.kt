@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -32,8 +33,9 @@ import com.nova.ai.accessibility.LabAction
 
 /**
  * Test card for NOVA's hands: click a button by its name, type into a field, scroll,
- * and press Back, Home or recent apps. With the 5-second option the action runs
- * after a countdown, so it can be tested on another app. Also tests the emergency stop.
+ * press Back, Home or recent apps, and make finger gestures (swipe, long press, double tap,
+ * pinch, two-finger swipe). With the 5-second option the action runs after a countdown,
+ * so it can be tested on another app. Also tests the emergency stop.
  */
 @Composable
 fun ActionLabCard(modifier: Modifier = Modifier) {
@@ -166,6 +168,35 @@ fun ActionLabCard(modifier: Modifier = Modifier) {
                 }
             }
 
+            Text(
+                text = stringResource(R.string.gst_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.gst_note),
+                style = MaterialTheme.typography.bodySmall
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GestureButton(R.string.gst_swipe_up, connected) { run(LabAction.SWIPE_UP) }
+                GestureButton(R.string.gst_swipe_down, connected) { run(LabAction.SWIPE_DOWN) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GestureButton(R.string.gst_swipe_left, connected) { run(LabAction.SWIPE_LEFT) }
+                GestureButton(R.string.gst_swipe_right, connected) { run(LabAction.SWIPE_RIGHT) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GestureButton(R.string.gst_long_press, connected) { run(LabAction.LONG_PRESS) }
+                GestureButton(R.string.gst_double_tap, connected) { run(LabAction.DOUBLE_TAP) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GestureButton(R.string.gst_pinch_out, connected) { run(LabAction.PINCH_OUT) }
+                GestureButton(R.string.gst_pinch_in, connected) { run(LabAction.PINCH_IN) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GestureButton(R.string.gst_two_up, connected) { run(LabAction.TWO_FINGER_UP) }
+                GestureButton(R.string.gst_two_down, connected) { run(LabAction.TWO_FINGER_DOWN) }
+            }
+
             message?.let { shown ->
                 Text(
                     text = (if (shown.success) "✅ " else "⚠️ ") + shown.text,
@@ -195,5 +226,17 @@ fun ActionLabCard(modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+}
+
+// One equally wide gesture button inside a row of the test card.
+@Composable
+private fun RowScope.GestureButton(label: Int, enabled: Boolean, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.weight(1f)
+    ) {
+        Text(stringResource(label))
     }
 }

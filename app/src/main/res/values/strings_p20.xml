@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gst_title">ইশারা পরীক্ষা (P20)</string>
+    <string name="gst_note">নোভা সোয়াইপ, লং প্রেস, ডাবল ট্যাপ এবং দুই আঙুলের ইশারা দিতে পারে। লং প্রেস ও ডাবল ট্যাপের জন্য ওপরের ঘরে স্ক্রিনে যেমন লেখা তেমন নাম লেখো। সোয়াইপ ও দুই আঙুলের ইশারা স্ক্রিনের মাঝখানে হয়।</string>
+    <string name="gst_swipe_up">↑ উপরে সোয়াইপ</string>
+    <string name="gst_swipe_down">↓ নিচে সোয়াইপ</string>
+    <string name="gst_swipe_left">← বামে সোয়াইপ</string>
+    <string name="gst_swipe_right">→ ডানে সোয়াইপ</string>
+    <string name="gst_long_press">লং প্রেস</string>
+    <string name="gst_double_tap">ডাবল ট্যাপ</string>
+    <string name="gst_pinch_out">জুম বাড়াও (ছড়াও)</string>
+    <string name="gst_pinch_in">জুম কমাও (গুটাও)</string>
+    <string name="gst_two_up">দুই আঙুল ↑</string>
+    <string name="gst_two_down">দুই আঙুল ↓</string>
+
+    <string name="gst_ok_swipe_up">উপরে সোয়াইপ করেছি।</string>
+    <string name="gst_ok_swipe_down">নিচে সোয়াইপ করেছি।</string>
+    <string name="gst_ok_swipe_left">বামে সোয়াইপ করেছি।</string>
+    <string name="gst_ok_swipe_right">ডানে সোয়াইপ করেছি।</string>
+    <string name="gst_ok_long_press">লং প্রেস করেছি: %1$s</string>
+    <string name="gst_ok_double_tap">ডাবল ট্যাপ করেছি: %1$s</string>
+    <string name="gst_ok_pinch_out">দুই আঙুলে ছড়িয়েছি (জুম বেড়েছে)।</string>
+    <string name="gst_ok_pinch_in">দুই আঙুলে গুটিয়েছি (জুম কমেছে)।</string>
+    <string name="gst_ok_two_up">দুই আঙুলে উপরে সোয়াইপ করেছি।</string>
+    <string name="gst_ok_two_down">দুই আঙুলে নিচে সোয়াইপ করেছি।</string>
+</resources>
