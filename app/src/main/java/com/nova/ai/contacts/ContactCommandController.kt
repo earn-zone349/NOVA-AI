@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.nova.ai.R
 import com.nova.ai.brain.RuleBasedBrain
+import com.nova.ai.security.EmergencyStop
 import com.nova.ai.core.IntentType
 import com.nova.ai.core.NovaIntent
 import com.nova.ai.core.NovaResult
@@ -64,6 +65,7 @@ class ContactCommandController(
 
     /** Looks at [text]; if it asks for a call or a message, starts that flow. */
     fun handleCommand(text: String) {
+        if (EmergencyStop.isActive) return
         pendingIntent = null
         val intent: NovaIntent? = analyze(text)
         val relevant: Boolean = intent != null &&
@@ -88,12 +90,14 @@ class ContactCommandController(
 
     /** The user picked one of several matching contacts. */
     fun pickContact(contact: Contact) {
+        if (EmergencyStop.isActive) return
         val current: ContactActionUi.ChooseContact = state as? ContactActionUi.ChooseContact ?: return
         chooseNumber(current.purpose, contact, current.body)
     }
 
     /** The user picked one of several numbers of a contact. */
     fun pickNumber(number: String) {
+        if (EmergencyStop.isActive) return
         val current: ContactActionUi.ChooseNumber = state as? ContactActionUi.ChooseNumber ?: return
         proceedWithNumber(current.purpose, current.contact.name, number, current.body)
     }
@@ -124,6 +128,7 @@ class ContactCommandController(
 
     /** Places the confirmed call (opens the dialer instead if the permission is missing). */
     fun placeCall(number: String) {
+        if (EmergencyStop.isActive) return
         if (!hasCallPermission()) {
             dial(number)
             return

@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nova.ai.R
 import com.nova.ai.brain.RuleBasedBrain
+import com.nova.ai.security.EmergencyStop
 import com.nova.ai.core.IntentType
 import com.nova.ai.core.NovaIntent
 import com.nova.ai.core.NovaResult
@@ -36,6 +37,7 @@ class MediaCommandController(context: Context) {
 
     /** Looks at [text]; if it is a music, search, navigation or camera command, carries it out. */
     fun handleCommand(text: String) {
+        if (EmergencyStop.isActive) return
         val intent: NovaIntent? = analyze(text)
         if (intent == null) {
             state = null

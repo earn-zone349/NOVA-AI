@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nova.ai.brain.RuleBasedBrain
+import com.nova.ai.security.EmergencyStop
 import com.nova.ai.core.IntentType
 import com.nova.ai.core.NovaIntent
 import com.nova.ai.core.NovaResult
@@ -27,6 +28,7 @@ class SystemCommandController(context: Context) {
 
     /** Looks at [text]; if it asks for a system action, carries it out. */
     fun handleCommand(text: String) {
+        if (EmergencyStop.isActive) return
         val intent: NovaIntent? = analyze(text)
         if (intent == null || intent.type != IntentType.SYSTEM_ACTION) {
             state = null

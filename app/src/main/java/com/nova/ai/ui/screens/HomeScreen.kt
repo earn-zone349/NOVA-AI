@@ -69,6 +69,9 @@ import com.nova.ai.voice.ConversationListener
 import com.nova.ai.voice.ConversationState
 import com.nova.ai.voice.SpokenReply
 import com.nova.ai.voice.toSpeechLanguage
+import com.nova.ai.voice.VoiceFocus
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.CoroutineScope
 
 private const val TAG: String = "HomeScreen"
@@ -213,8 +216,11 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             if (event == Lifecycle.Event.ON_STOP) conversation.stop()
         }
         lifecycleOwner?.lifecycle?.addObserver(observer)
+        // The bubble and the emergency stop stop this screen's voice through the shared registry.
+        VoiceFocus.register("home") { Handler(Looper.getMainLooper()).post { conversation.stop() } }
         onDispose {
             lifecycleOwner?.lifecycle?.removeObserver(observer)
+            VoiceFocus.unregister("home")
             conversation.shutdown()
             voiceEngine.shutdown()
             systemController.release()
@@ -222,6 +228,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     }
 
     fun startConversation() {
+        VoiceFocus.claim("home")
         commandCount = 0
         transcript.clear()
         when (val result: NovaResult<Unit> = conversation.start()) {

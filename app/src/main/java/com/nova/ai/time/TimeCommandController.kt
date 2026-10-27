@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nova.ai.R
 import com.nova.ai.brain.RuleBasedBrain
+import com.nova.ai.security.EmergencyStop
 import com.nova.ai.core.IntentType
 import com.nova.ai.core.NovaIntent
 import com.nova.ai.core.NovaResult
@@ -53,6 +54,7 @@ class TimeCommandController(context: Context) {
 
     /** Looks at [text]; if it asks for an alarm, timer or reminder, sets it. */
     fun handleCommand(text: String) {
+        if (EmergencyStop.isActive) return
         val intent: NovaIntent? = analyze(text)
         if (intent == null || intent.type != IntentType.SET_ALARM) {
             state = TimeActionUi.Idle
@@ -63,6 +65,7 @@ class TimeCommandController(context: Context) {
 
     /** The user answered "morning or evening?". */
     fun choosePeriod(isEvening: Boolean) {
+        if (EmergencyStop.isActive) return
         val current: TimeActionUi.AskPeriod = state as? TimeActionUi.AskPeriod ?: return
         val hour24: Int = TimePlanner.to24(current.hour, isEvening)
         apply(TimePlan.Alarm(hour24, current.minute, current.label, current.isReminder))

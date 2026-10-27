@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nova.ai.brain.RuleBasedBrain
+import com.nova.ai.security.EmergencyStop
 import com.nova.ai.core.IntentType
 import com.nova.ai.core.NovaIntent
 import com.nova.ai.core.NovaResult
@@ -47,6 +48,7 @@ class AppCommandController(
 
     /** Looks at [text]; if it asks to open an app, finds and opens it. */
     fun handleCommand(text: String) {
+        if (EmergencyStop.isActive) return
         val spoken: String? = extractAppName(text)
         if (spoken == null) {
             state = AppActionUi.Idle
@@ -57,12 +59,14 @@ class AppCommandController(
 
     /** The user said "yes" to the suggested app. */
     fun confirm() {
+        if (EmergencyStop.isActive) return
         val current: AppActionUi.Confirm = state as? AppActionUi.Confirm ?: return
         learnAndOpen(current.spoken, current.app)
     }
 
     /** The user picked one app from a list. */
     fun choose(app: RegisteredApp) {
+        if (EmergencyStop.isActive) return
         val spoken: String = when (val current: AppActionUi = state) {
             is AppActionUi.Choose -> current.spoken
             is AppActionUi.Confirm -> current.spoken
@@ -73,6 +77,7 @@ class AppCommandController(
 
     /** The user picked an installed app that was not in the library yet. */
     fun addAndOpen(app: InstalledApp) {
+        if (EmergencyStop.isActive) return
         val current: AppActionUi.Suggest = state as? AppActionUi.Suggest ?: return
         scope.launch {
             val added: NovaResult<Unit> = registry.add(app, listOf(current.spoken))
