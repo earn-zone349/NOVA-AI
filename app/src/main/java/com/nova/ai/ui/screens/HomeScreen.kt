@@ -57,6 +57,8 @@ import com.nova.ai.ui.components.ContactActionCard
 import com.nova.ai.ui.components.IntentInsightCard
 import com.nova.ai.ui.components.MediaActionCard
 import com.nova.ai.ui.components.NovaInfoCard
+import com.nova.ai.tasks.TaskHub
+import com.nova.ai.ui.components.TaskQueueCard
 import com.nova.ai.ui.components.NovaScreenLayout
 import com.nova.ai.ui.components.SetupReminderCard
 import com.nova.ai.ui.components.SystemActionCard
@@ -162,6 +164,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     statusOverride = context.getString(R.string.home_status_heard, command.rawText)
                     transcript.add("$commandCount. ${command.rawText}")
                     while (transcript.size > TRANSCRIPT_LIMIT) transcript.removeAt(0)
+                    // P23: a command with several parts ("... তারপর ...") runs as a task, step by step.
+                    if (TaskHub.submitIfMultiStep(context, command.rawText)) return
                     appController.handleCommand(command.rawText)
                     systemController.handleCommand(command.rawText)
                     contactController.handleCommand(command.rawText)
@@ -333,6 +337,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     statusOverride = emptyText
                 } else {
                     statusOverride = receivedText
+                    if (TaskHub.submitIfMultiStep(context, commandText)) return@Button
                     appController.handleCommand(commandText)
                     systemController.handleCommand(commandText)
                     contactController.handleCommand(commandText)
@@ -356,6 +361,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         TimeActionCard(controller = timeController)
 
         MediaActionCard(controller = mediaController)
+
+        TaskQueueCard(showInput = false)
 
         CommandInsightCard(text = commandText)
 

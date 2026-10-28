@@ -8,7 +8,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.nova.ai.R
+import com.nova.ai.security.EmergencyStop
 import com.nova.ai.ui.components.NovaInfoCard
+import com.nova.ai.ui.components.TaskQueueCard
 import com.nova.ai.ui.components.NovaScreenLayout
 
 /** Automation: routines, task history and the stop control. */
@@ -27,10 +29,12 @@ fun AutomationScreen(modifier: Modifier = Modifier) {
             title = stringResource(R.string.automation_history_title),
             body = stringResource(R.string.automation_history_none)
         )
+        TaskQueueCard()
+
         // Disabled until the emergency stop is implemented (P22).
         Button(
-            onClick = { },
-            enabled = false,
+            onClick = { if (EmergencyStop.isActive) EmergencyStop.release("automation screen") else EmergencyStop.trigger("automation screen") },
+            enabled = true,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(stringResource(R.string.automation_stop_button))

@@ -19,6 +19,11 @@ import com.nova.ai.core.ErrorCode
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
 import com.nova.ai.logging.NovaLogger
+import com.nova.ai.core.TaskStatus
+import com.nova.ai.tasks.PendingQuestion
+import com.nova.ai.tasks.QueueSnapshot
+import com.nova.ai.tasks.TaskHub
+import com.nova.ai.tasks.TaskSnapshot
 import com.nova.ai.security.EmergencyStop
 import com.nova.ai.settings.AppLanguage
 import com.nova.ai.settings.SettingsRepository
@@ -58,8 +63,73 @@ class NovaBubbleService : Service() {
     private var routing: Boolean = false
     private var running: Boolean = false
     private var destroyed: Boolean = false
+    private var taskActive: Boolean = false
+    private var lastFinishedId: String? = null
+    private var lastNoticeSeq: Int = 0
+    private var lastQuestionKey: String? = null
 
     private val emergencyListener: (Boolean) -> Unit = { _ -> handler.post { onEmergencyChanged() } }
+
+    // P23: the progress of a multi-step task is shown on the bubble.
+    private val taskListener: (QueueSnapshot) -> Unit = { snapshot -> onTaskChanged(snapshot) }
+
+    private fun onTaskChanged(snapshot: QueueSnapshot) {
+        if (!running || destroyed) return
+        val current: TaskSnapshot? = snapshot.current
+        val busy: Boolean = current?.isOpen == true || snapshot.waiting.isNotEmpty()
+        if (busy != taskActive) {
+            taskActive = busy
+            refreshState()
+        }
+        // While the emergency stop is on, its own message stays on the bubble.
+        if (EmergencyStop.isActive) return
+
+        val notice: String? = snapshot.notice
+        if (notice != null) {
+            if (snapshot.noticeSeq != lastNoticeSeq) {
+                lastNoticeSeq = snapshot.noticeSeq
+                overlay.showStatus(notice, MessageKind.ERROR, STATUS_MS)
+            }
+            return
+        }
+        if (current == null) return
+
+        val question: PendingQuestion? = current.question
+        when {
+            question != null -> showTaskQuestion(current.id, question)
+            current.isOpen -> {
+                lastQuestionKey = null
+                overlay.showStatus(taskProgressText(current), null, 0L)
+            }
+            current.id != lastFinishedId -> {
+                lastFinishedId = current.id
+                lastQuestionKey = null
+                val text: String = current.summary ?: current.title
+                val ok: Boolean = current.status == TaskStatus.COMPLETED
+                overlay.showStatus(text, if (ok) MessageKind.DONE else MessageKind.ERROR, STATUS_MS)
+                speakResult(text)
+            }
+        }
+    }
+
+    private fun taskProgressText(task: TaskSnapshot): String {
+        val total: Int = task.steps.size
+        if (task.status == TaskStatus.PAUSED) return getString(R.string.bub_task_paused, task.doneCount, total)
+        val index: Int = if (task.activeIndex >= 0) task.activeIndex else minOf(task.doneCount, total - 1)
+        return getString(R.string.bub_task_progress, index + 1, total, task.steps[index].title)
+    }
+
+    private fun showTaskQuestion(taskId: String, question: PendingQuestion) {
+        val key = "$taskId|${question.text}"
+        if (key == lastQuestionKey) return
+        lastQuestionKey = key
+        val buttons: MutableList<PanelButton> = question.options.mapIndexed { index, label ->
+            PanelButton(label, if (index == 0) PanelStyle.PRIMARY else PanelStyle.NORMAL) { TaskHub.answer(index) }
+        }.toMutableList()
+        buttons.add(PanelButton(getString(R.string.bub_task_cancel)) { TaskHub.cancelCurrent() })
+        overlay.showPanel(question.text, buttons, QUESTION_MS) { TaskHub.cancelCurrent() }
+        speakResult(question.text)
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -137,6 +207,7 @@ class NovaBubbleService : Service() {
         destroyed = true
         try {
             EmergencyStop.removeListener(emergencyListener)
+            TaskHub.removeListener(taskListener)
             EmergencyStop.unregisterHook(HOOK_KEY)
             VoiceFocus.unregister(VOICE_OWNER)
             if (isReady()) {
@@ -176,6 +247,7 @@ class NovaBubbleService : Service() {
         VoiceFocus.register(VOICE_OWNER) { handler.post { stopListeningTurn() } }
         EmergencyStop.registerHook(HOOK_KEY) { handler.post { onEmergencyHook() } }
         EmergencyStop.addListener(emergencyListener)
+        TaskHub.addListener(taskListener)
         refreshState()
         NovaLogger.i(TAG, "Bubble started")
     }
@@ -292,7 +364,10 @@ class NovaBubbleService : Service() {
 
         override fun onCommand(command: VoiceCommand) {
             overlay.showStatus("“${command.rawText}”", null, 0L)
-            router.handle(command.rawText)
+            // P23: a command with several parts ("... তারপর ...") runs as a task, step by step.
+            if (!TaskHub.submitIfMultiStep(applicationContext, command.rawText)) {
+                router.handle(command.rawText)
+            }
         }
 
         override fun onEnded(reason: ConversationEnd) {
@@ -380,7 +455,7 @@ class NovaBubbleService : Service() {
 
     private fun refreshState() {
         if (!isReady() || destroyed) return
-        overlay.setState(BubbleStateMapper.map(EmergencyStop.isActive, conversationState, routing))
+        overlay.setState(BubbleStateMapper.map(EmergencyStop.isActive, conversationState, routing || taskActive))
     }
 
     // ---------------------------------------------------------------- notification

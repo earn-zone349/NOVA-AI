@@ -114,7 +114,8 @@ internal class BubbleOutputMapper(
         if (outcome == null) return BubbleOutput.None
         return when (outcome.kind) {
             OutcomeKind.DONE -> BubbleOutput.Message(outcome.message, MessageKind.DONE)
-            OutcomeKind.GUIDED, OutcomeKind.HINT -> BubbleOutput.Message(outcome.message, MessageKind.INFO)
+            OutcomeKind.GUIDED -> BubbleOutput.Message(outcome.message, MessageKind.INFO, completed = true)
+            OutcomeKind.HINT -> BubbleOutput.Message(outcome.message, MessageKind.INFO)
             OutcomeKind.NEEDS_PERMISSION -> BubbleOutput.NeedsApp(outcome.message)
             OutcomeKind.FAILED -> BubbleOutput.Message(outcome.message, MessageKind.ERROR)
         }

@@ -41,7 +41,7 @@
     <string name="automation_history_title">টাস্ক ইতিহাস</string>
     <string name="automation_history_none">এখনো কোনো কাজ চালানো হয়নি (P25)।</string>
     <string name="automation_stop_button">সব কাজ থামাও</string>
-    <string name="automation_stop_note">জরুরি Stop P22-তে চালু হবে।</string>
+    <string name="automation_stop_note">এই বাটন জরুরি Stop চালু করে। আবার চাপলে ছেড়ে দেয়।</string>
 
     <!-- Permissions -->
     <string name="permissions_title">Permissions</string>

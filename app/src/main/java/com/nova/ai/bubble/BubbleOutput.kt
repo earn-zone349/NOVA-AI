@@ -21,7 +21,12 @@ internal sealed class BubbleOutput {
     object None : BubbleOutput()
 
     /** A finished result, or a note. */
-    data class Message(val text: String, val kind: MessageKind) : BubbleOutput()
+    data class Message(
+        val text: String,
+        val kind: MessageKind,
+        /** True if the job is finished. A guided screen (the user taps the last step) counts as finished. */
+        val completed: Boolean = kind == MessageKind.DONE
+    ) : BubbleOutput()
 
     /**
      * A question the user must answer by tapping one of the [options] (or cancel). [source] is the

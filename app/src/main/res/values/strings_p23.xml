@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Task card (Automation and Home screens) -->
+    <string name="tsk_card_title">ধাপে ধাপে কাজ</string>
+    <string name="tsk_card_note">একটি কমান্ডে কয়েকটি কাজ বলুন, “তারপর” দিয়ে আলাদা করে। যেমন: ক্রোম খোলো তারপর ভলিউম বাড়াও তারপর টর্চ জ্বালাও। নোভা একটার পর একটা করবে, কোনো অংশ না বুঝলে কিছুই শুরু করবে না।</string>
+    <string name="tsk_input_label">কয়েকটি কাজ (তারপর দিয়ে আলাদা)</string>
+    <string name="tsk_run">চালাও</string>
+    <string name="tsk_progress">%1$d/%2$d ধাপ শেষ</string>
+    <string name="tsk_waiting">লাইনে অপেক্ষায়: %1$s</string>
+    <string name="tsk_pause">থামাও</string>
+    <string name="tsk_resume">চালিয়ে যাও</string>
+    <string name="tsk_cancel">বাতিল</string>
+    <string name="tsk_cancel_all">সব বাতিল</string>
+    <string name="tsk_dismiss">ঠিক আছে</string>
+    <string name="tsk_status_pending">অপেক্ষায়</string>
+    <string name="tsk_status_running">চলছে</string>
+    <string name="tsk_status_paused">থামানো আছে</string>
+    <string name="tsk_status_completed">শেষ</string>
+    <string name="tsk_status_failed">ব্যর্থ</string>
+    <string name="tsk_status_cancelled">বাতিল</string>
+
+    <!-- Bubble: task progress -->
+    <string name="bub_task_progress">⏳ %1$d/%2$d · %3$s</string>
+    <string name="bub_task_paused">⏸ থামানো আছে · %1$d/%2$d</string>
+    <string name="bub_task_cancel">কাজ বাতিল করুন</string>
+</resources>
