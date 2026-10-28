@@ -36,14 +36,23 @@ data class TaskTiming(
     val settleAfterLaunchMs: Long = 1500L,
     val stepTimeoutMs: Long = 20_000L,
     val questionTimeoutMs: Long = 60_000L,
-    val betweenTasksMs: Long = 1500L
-)
+    val betweenTasksMs: Long = 1500L,
+    /** Own timeouts for kinds of steps that should be quicker or slower than [stepTimeoutMs]. */
+    val perTypeTimeoutMs: Map<IntentType, Long> = emptyMap()
+) {
+    /** How long a step of kind [type] may take. */
+    fun stepTimeoutFor(type: IntentType): Long = perTypeTimeoutMs[type] ?: stepTimeoutMs
+}
 
 /**
  * Runs tasks one after another. Each task is a list of steps that run in order; the queue waits
- * after a step (longer after one that opens an app), watches every step with a timeout, asks the
- * user when a step needs an answer, and stops the task at the first step that fails (the steps
- * after it are skipped). More tasks can wait in line. Pause stops the task before its next step.
+ * after a step (longer after one that opens an app), watches every step with a timeout, and asks the
+ * user when a step needs an answer. A step that fails is tried again as [retry] allows (waiting a
+ * little longer each time); when the tries are used up, an alternative path from [fallback] is
+ * tried once (for example the website of an app that is not installed). If that fails too, the user
+ * is asked what to do (try again, skip the step, cancel) when [RetryPolicy.askUserOnFailure] is on;
+ * otherwise the task stops there and the steps after it are skipped.
+ * More tasks can wait in line. Pause stops the task before its next step.
  * Use from one thread only (the main thread on the phone). Logic only, no Android classes.
  */
 class TaskQueue(
@@ -51,7 +60,9 @@ class TaskQueue(
     private val scheduler: Scheduler,
     private val onChanged: (QueueSnapshot) -> Unit,
     private val timing: TaskTiming = TaskTiming(),
-    private val log: (String) -> Unit = {}
+    private val log: (String) -> Unit = {},
+    private val retry: RetryPolicy = RetryPolicy.NONE,
+    private val fallback: FallbackPlanner = NoFallback
 ) : TaskControl {
 
     private class ActiveTask(val draft: TaskDraft) {
@@ -63,7 +74,21 @@ class TaskQueue(
         var resumePending: Boolean = false
         var stepOpen: Boolean = false
         var summary: String? = null
+
+        // The try number of each step (for the retry rule), and all tries together (for the user).
+        val attempts: IntArray = IntArray(draft.steps.size)
+        val tries: IntArray = IntArray(draft.steps.size)
+        val triedAlternative: BooleanArray = BooleanArray(draft.steps.size)
+
+        // The step that runs now (the original, or an alternative made for it).
+        var currentStep: PlannedStep = draft.steps.first()
+
+        // While the question is about a failed step: what each option does.
+        var recoveryActions: List<RecoveryAction>? = null
+        var failureReason: String? = null
     }
+
+    private enum class RecoveryAction { RETRY, SKIP, CANCEL }
 
     private var active: ActiveTask? = null
     private var finished: TaskSnapshot? = null
@@ -74,6 +99,7 @@ class TaskQueue(
     private var stepTimer: Cancellable? = null
     private var nextStepTimer: Cancellable? = null
     private var nextTaskTimer: Cancellable? = null
+    private var retryTimer: Cancellable? = null
 
     // ---------------------------------------------------------------- what the screens read
 
@@ -171,6 +197,11 @@ class TaskQueue(
         if (optionIndex !in question.options.indices) {
             return NovaResult.failure(ErrorCode.INVALID_INPUT, TaskMessages.MSG_BAD_CHOICE)
         }
+        val recovery: List<RecoveryAction>? = task.recoveryActions
+        if (recovery != null) {
+            answerRecovery(task, recovery[optionIndex])
+            return NovaResult.Success(Unit)
+        }
         task.question = null
         task.states[task.index] = StepState.RUNNING
         armStepTimer(timing.stepTimeoutMs)
@@ -199,23 +230,33 @@ class TaskQueue(
         val task = ActiveTask(draft)
         active = task
         log("task started: ${draft.id}, ${draft.steps.size} steps")
-        runStep(0)
+        runOriginal(0)
     }
 
-    private fun runStep(index: Int) {
+    // Runs the step as the plan has it, for the first time.
+    private fun runOriginal(index: Int) {
+        val task: ActiveTask = active ?: return
+        runStep(index, task.draft.steps[index], 1)
+    }
+
+    private fun runStep(index: Int, step: PlannedStep, attempt: Int) {
         val task: ActiveTask = active ?: return
         task.index = index
+        task.currentStep = step
+        task.attempts[index] = attempt
+        task.tries[index] += 1
         task.states[index] = StepState.RUNNING
+        task.messages[index] = null
         task.stepOpen = true
         token += 1
         val myToken: Long = token
-        armStepTimer(timing.stepTimeoutMs)
+        armStepTimer(timing.stepTimeoutFor(step.intentType))
         changed()
         try {
-            executor.execute(task.draft.steps[index]) { result -> onResult(myToken, result) }
+            executor.execute(step) { result -> onResult(myToken, result) }
         } catch (e: Exception) {
             log("step start failed: ${e.javaClass.simpleName}")
-            if (myToken == token) failTask(TaskMessages.MSG_START_FAILED)
+            if (myToken == token) handleFailure(task, TaskMessages.MSG_START_FAILED, FailureKind.RETRYABLE)
         }
     }
 
@@ -227,14 +268,14 @@ class TaskQueue(
                 task.stepOpen = false
                 disarmStepTimer()
                 task.states[task.index] = StepState.DONE
-                task.messages[task.index] = result.message
+                task.messages[task.index] = task.currentStep.note ?: result.message
                 changed()
                 scheduleNext(task)
             }
-            is StepResult.Failed -> failTask(result.message)
+            is StepResult.Failed -> handleFailure(task, result.message, result.kind)
             is StepResult.NeedsUser -> {
                 if (result.options.isEmpty()) {
-                    failTask(result.question)
+                    handleFailure(task, result.question, FailureKind.PERMANENT)
                     return
                 }
                 task.states[task.index] = StepState.WAITING_USER
@@ -248,7 +289,12 @@ class TaskQueue(
     // After a step: finish the task, or wait a moment and go on (longer after a step that opens an app).
     private fun scheduleNext(task: ActiveTask) {
         if (task.index >= task.draft.steps.lastIndex) {
-            task.summary = TaskMessages.allDone(task.draft.steps.size)
+            val skipped: Int = task.states.count { it == StepState.SKIPPED }
+            task.summary = if (skipped == 0) {
+                TaskMessages.allDone(task.draft.steps.size)
+            } else {
+                TaskMessages.doneWithSkips(task.states.count { it == StepState.DONE }, skipped)
+            }
             finish(task, TaskStatus.COMPLETED)
             return
         }
@@ -265,16 +311,108 @@ class TaskQueue(
             task.resumePending = true
             return
         }
-        runStep(task.index + 1)
+        runOriginal(task.index + 1)
+    }
+
+    // A step did not work. Try again, or try another way, or ask the user, or stop.
+    private fun handleFailure(task: ActiveTask, reason: String, kind: FailureKind) {
+        val index: Int = task.index
+        val step: PlannedStep = task.currentStep
+        val attempt: Int = task.attempts[index]
+        task.stepOpen = false
+        disarmStepTimer()
+        token += 1   // answers of the failed try that arrive late are ignored
+
+        if (retry.allowsRetry(step, kind, attempt)) {
+            val next: Int = attempt + 1
+            task.states[index] = StepState.RETRYING
+            task.messages[index] = TaskMessages.retrying(next, retry.maxAttempts, reason)
+            log("retry $next/${retry.maxAttempts} of ${step.id}")
+            changed()
+            retryTimer?.cancel()
+            retryTimer = scheduler.postDelayed(retry.delayBefore(next)) {
+                retryTimer = null
+                if (active === task) runStep(index, step, next)
+            }
+            return
+        }
+
+        if (!task.triedAlternative[index]) {
+            val alternative: PlannedStep? = try {
+                fallback.alternativeFor(task.draft.steps[index])
+            } catch (e: Exception) {
+                log("fallback failed: ${e.javaClass.simpleName}")
+                null
+            }
+            if (alternative != null) {
+                task.triedAlternative[index] = true
+                log("alternative path for ${step.id}")
+                runStep(index, alternative, 1)
+                return
+            }
+        }
+
+        if (retry.askUserOnFailure) askWhatToDo(task, reason) else failTask(reason)
+    }
+
+    // The step failed for good: the user decides (try again, skip it if steps follow, or cancel).
+    private fun askWhatToDo(task: ActiveTask, reason: String) {
+        val index: Int = task.index
+        val options: MutableList<String> = mutableListOf(TaskMessages.OPTION_RETRY)
+        val actions: MutableList<RecoveryAction> = mutableListOf(RecoveryAction.RETRY)
+        if (index < task.draft.steps.lastIndex) {
+            options.add(TaskMessages.OPTION_SKIP)
+            actions.add(RecoveryAction.SKIP)
+        }
+        options.add(TaskMessages.OPTION_CANCEL)
+        actions.add(RecoveryAction.CANCEL)
+
+        task.recoveryActions = actions
+        task.failureReason = reason
+        task.states[index] = StepState.WAITING_USER
+        task.messages[index] = reason
+        task.question = PendingQuestion(
+            TaskMessages.recoveryQuestion(index + 1, task.draft.steps.size, reason),
+            options
+        )
+        armStepTimer(timing.questionTimeoutMs, onQuestionTimeout = true)
+        changed()
+    }
+
+    private fun answerRecovery(task: ActiveTask, action: RecoveryAction) {
+        val index: Int = task.index
+        task.question = null
+        task.recoveryActions = null
+        disarmStepTimer()
+        when (action) {
+            RecoveryAction.RETRY -> {
+                task.triedAlternative[index] = false
+                runStep(index, task.draft.steps[index], 1)
+            }
+            RecoveryAction.SKIP -> {
+                task.states[index] = StepState.SKIPPED
+                changed()
+                scheduleNext(task)
+            }
+            RecoveryAction.CANCEL -> cancelActive(TaskMessages.MSG_CANCELLED)
+        }
     }
 
     private fun failTask(reason: String) {
         val task: ActiveTask = active ?: return
         task.stepOpen = false
+        task.question = null
+        task.recoveryActions = null
         task.states[task.index] = StepState.FAILED
         task.messages[task.index] = reason
         for (i in task.index + 1 until task.states.size) task.states[i] = StepState.SKIPPED
-        task.summary = TaskMessages.stoppedAt(task.index + 1, task.draft.steps.size, reason)
+        task.summary = TaskMessages.stoppedAt(
+            task.index + 1,
+            task.draft.steps.size,
+            reason,
+            attempts = task.tries[task.index],
+            triedAlternative = task.triedAlternative[task.index]
+        )
         finish(task, TaskStatus.FAILED)
     }
 
@@ -287,7 +425,7 @@ class TaskQueue(
         }
         for (i in task.states.indices) {
             if (task.states[i] == StepState.PENDING || task.states[i] == StepState.RUNNING ||
-                task.states[i] == StepState.WAITING_USER
+                task.states[i] == StepState.RETRYING || task.states[i] == StepState.WAITING_USER
             ) {
                 task.states[i] = StepState.CANCELLED
             }
@@ -300,9 +438,12 @@ class TaskQueue(
         disarmStepTimer()
         nextStepTimer?.cancel()
         nextStepTimer = null
+        retryTimer?.cancel()
+        retryTimer = null
         token += 1
         task.status = status
         task.question = null
+        task.recoveryActions = null
         task.stepOpen = false
         finished = snapshotOf(task)
         active = null
@@ -325,15 +466,18 @@ class TaskQueue(
         stepTimer = scheduler.postDelayed(delayMs) {
             if (timerToken != token || active == null) return@postDelayed
             stepTimer = null
+            val task: ActiveTask = active ?: return@postDelayed
             if (onQuestionTimeout) {
-                cancelActive(TaskMessages.MSG_QUESTION_TIMEOUT)
+                // A question about a failed step ends as a failure; any other question cancels the task.
+                val reason: String? = task.failureReason.takeIf { task.recoveryActions != null }
+                if (reason != null) failTask(reason) else cancelActive(TaskMessages.MSG_QUESTION_TIMEOUT)
             } else {
                 try {
                     executor.cancel()
                 } catch (e: Exception) {
                     log("executor cancel failed: ${e.javaClass.simpleName}")
                 }
-                failTask(TaskMessages.MSG_STEP_TIMEOUT)
+                handleFailure(task, TaskMessages.MSG_STEP_TIMEOUT, FailureKind.UNCERTAIN)
             }
         }
     }
@@ -358,7 +502,14 @@ class TaskQueue(
         title = task.draft.title,
         status = task.status,
         steps = task.draft.steps.mapIndexed { i, step ->
-            StepSnapshot(step.id, step.title, task.states[i], task.messages[i])
+            StepSnapshot(
+                id = step.id,
+                title = step.title,
+                state = task.states[i],
+                message = task.messages[i],
+                attempt = maxOf(1, task.attempts[i]),
+                maxAttempts = retry.maxAttempts
+            )
         },
         question = task.question,
         summary = task.summary

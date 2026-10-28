@@ -167,12 +167,16 @@ private fun TaskBlock(task: TaskSnapshot) {
     }
 }
 
-private fun stepLine(step: StepSnapshot): String =
-    if (step.message.isNullOrBlank() || step.state == StepState.DONE) step.title else "${step.title} — ${step.message}"
+private fun stepLine(step: StepSnapshot): String {
+    val tries: String = if (step.attempt > 1 && step.state != StepState.DONE) " [${step.attempt}/${step.maxAttempts}]" else ""
+    val note: String = if (step.message.isNullOrBlank()) "" else " — ${step.message}"
+    return step.title + tries + note
+}
 
 private fun icon(state: StepState): String = when (state) {
     StepState.PENDING -> "○"
     StepState.RUNNING -> "▶"
+    StepState.RETRYING -> "🔁"
     StepState.WAITING_USER -> "❓"
     StepState.DONE -> "✅"
     StepState.FAILED -> "❌"

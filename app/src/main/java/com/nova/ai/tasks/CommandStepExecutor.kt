@@ -4,6 +4,7 @@ import android.content.Context
 import com.nova.ai.bubble.BubbleCommandRouter
 import com.nova.ai.bubble.BubbleOutput
 import com.nova.ai.bubble.ResourceBubbleTexts
+import com.nova.ai.core.NovaResult
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -19,6 +20,7 @@ internal class CommandStepExecutor(
 
     private var callback: ((StepResult) -> Unit)? = null
     private var decision: BubbleOutput.Decision? = null
+    private val urlOpener = UrlOpener(context)
 
     private val router = BubbleCommandRouter(
         context = context,
@@ -29,8 +31,18 @@ internal class CommandStepExecutor(
     )
 
     override fun execute(step: PlannedStep, onResult: (StepResult) -> Unit) {
-        callback = onResult
         decision = null
+        if (step.kind == StepKind.OPEN_URL) {
+            // An alternative path: the page opens at once, there is nothing to wait for.
+            callback = null
+            val url: String = step.url ?: return onResult(StepResult.Failed(TaskMessages.MSG_START_FAILED))
+            when (val opened: NovaResult<Unit> = urlOpener.open(url)) {
+                is NovaResult.Success -> onResult(StepResult.Done(step.note ?: step.title))
+                is NovaResult.Failure -> onResult(StepResult.Failed(opened.error.message))
+            }
+            return
+        }
+        callback = onResult
         router.handle(step.command)
     }
 

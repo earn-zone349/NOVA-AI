@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nova.ai.brain.RuleBasedBrain
 import com.nova.ai.core.ErrorCode
+import com.nova.ai.core.IntentType
 import com.nova.ai.core.NovaIntent
 import com.nova.ai.core.NovaResult
 import com.nova.ai.core.VoiceCommand
@@ -52,7 +53,16 @@ object TaskHub {
             executor = CommandStepExecutor(appContext, scope),
             scheduler = HandlerScheduler(mainHandler),
             onChanged = { snapshot -> publish(snapshot) },
-            log = { message -> NovaLogger.i(TAG, message) }
+            timing = TaskTiming(
+                perTypeTimeoutMs = mapOf(
+                    IntentType.SYSTEM_ACTION to 10_000L,
+                    IntentType.MEDIA_CONTROL to 10_000L,
+                    IntentType.OPEN_APP to 15_000L
+                )
+            ),
+            log = { message -> NovaLogger.i(TAG, message) },
+            retry = RetryPolicy.STANDARD,
+            fallback = WebFallbackPlanner
         )
         planner = CommandPlanner(analyze = { part -> analyze(part) })
         // The emergency stop cancels the running task and empties the line.

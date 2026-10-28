@@ -40,7 +40,15 @@ class CommandPlanner(
             if (intent == null || intent.type == IntentType.UNKNOWN) {
                 return NovaResult.failure(ErrorCode.INVALID_INPUT, TaskMessages.unknownPart(part))
             }
-            steps.add(PlannedStep(id = "s${position + 1}", title = part, command = part, intentType = intent.type))
+            steps.add(
+                PlannedStep(
+                    id = "s${position + 1}",
+                    title = part,
+                    command = part,
+                    intentType = intent.type,
+                    entities = intent.entities
+                )
+            )
         }
         return NovaResult.Success(TaskDraft(id = newId(), title = shorten(text), steps = steps))
     }

@@ -36,6 +36,18 @@ class StepResultMapperTest {
     }
 
     @Test
+    fun anErrorTheAppReportedMayBeTriedAgainButOtherFailuresMayNot() {
+        assertEquals(
+            StepResult.Failed("could not open", FailureKind.RETRYABLE),
+            StepResultMapper.fromOutput(BubbleOutput.Message("could not open", MessageKind.ERROR, retryable = true))
+        )
+        assertEquals(
+            StepResult.Failed("not found", FailureKind.PERMANENT),
+            StepResultMapper.fromOutput(BubbleOutput.Message("not found", MessageKind.INFO))
+        )
+    }
+
+    @Test
     fun aGuidedInfoMessageMarkedCompletedIsSuccess() {
         assertEquals(
             StepResult.Done("screen opened"),

@@ -25,7 +25,9 @@ internal sealed class BubbleOutput {
         val text: String,
         val kind: MessageKind,
         /** True if the job is finished. A guided screen (the user taps the last step) counts as finished. */
-        val completed: Boolean = kind == MessageKind.DONE
+        val completed: Boolean = kind == MessageKind.DONE,
+        /** True if the phone reported an error: the action did not happen, so doing it again is safe. */
+        val retryable: Boolean = false
     ) : BubbleOutput()
 
     /**

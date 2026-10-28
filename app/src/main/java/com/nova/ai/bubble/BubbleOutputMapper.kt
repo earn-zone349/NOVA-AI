@@ -63,7 +63,7 @@ internal class BubbleOutputMapper(
         is ContactActionUi.Info -> BubbleOutput.Message(state.message, MessageKind.INFO)
         is ContactActionUi.NotFound ->
             BubbleOutput.Message(texts.contactNotFound(state.spoken), MessageKind.INFO)
-        is ContactActionUi.Failed -> BubbleOutput.Message(state.message, MessageKind.ERROR)
+        is ContactActionUi.Failed -> BubbleOutput.Message(state.message, MessageKind.ERROR, retryable = true)
     }
 
     private fun fromApp(state: AppActionUi): BubbleOutput = when (state) {
@@ -89,7 +89,7 @@ internal class BubbleOutputMapper(
             }
         )
         is AppActionUi.NotFound -> BubbleOutput.Message(texts.appNotFound(state.spoken), MessageKind.INFO)
-        is AppActionUi.Failed -> BubbleOutput.Message(state.message, MessageKind.ERROR)
+        is AppActionUi.Failed -> BubbleOutput.Message(state.message, MessageKind.ERROR, retryable = true)
     }
 
     private fun fromTime(state: TimeActionUi): BubbleOutput = when (state) {
@@ -107,7 +107,7 @@ internal class BubbleOutputMapper(
             )
         }
         is TimeActionUi.NeedsDetail -> BubbleOutput.Message(state.message, MessageKind.INFO)
-        is TimeActionUi.Failed -> BubbleOutput.Message(state.message, MessageKind.ERROR)
+        is TimeActionUi.Failed -> BubbleOutput.Message(state.message, MessageKind.ERROR, retryable = true)
     }
 
     private fun fromOutcome(outcome: SystemActionOutcome?): BubbleOutput {
@@ -117,7 +117,7 @@ internal class BubbleOutputMapper(
             OutcomeKind.GUIDED -> BubbleOutput.Message(outcome.message, MessageKind.INFO, completed = true)
             OutcomeKind.HINT -> BubbleOutput.Message(outcome.message, MessageKind.INFO)
             OutcomeKind.NEEDS_PERMISSION -> BubbleOutput.NeedsApp(outcome.message)
-            OutcomeKind.FAILED -> BubbleOutput.Message(outcome.message, MessageKind.ERROR)
+            OutcomeKind.FAILED -> BubbleOutput.Message(outcome.message, MessageKind.ERROR, retryable = true)
         }
     }
 
