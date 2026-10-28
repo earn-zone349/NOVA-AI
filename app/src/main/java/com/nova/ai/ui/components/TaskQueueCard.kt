@@ -82,7 +82,7 @@ fun TaskQueueCard(modifier: Modifier = Modifier, showInput: Boolean = true) {
                 Text(
                     text = notice,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
+                    color = if (snapshot.noticeIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                 )
             }
 

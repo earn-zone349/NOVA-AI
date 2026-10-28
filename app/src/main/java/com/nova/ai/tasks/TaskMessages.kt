@@ -15,6 +15,31 @@ object TaskMessages {
     const val MSG_CANNOT_PAUSE: String = "এই কাজ এখন থামানো যাবে না।"
     const val MSG_CANNOT_RESUME: String = "এই কাজ থামানো নেই।"
 
+    const val MSG_PAUSED: String = "কাজ থামানো হয়েছে। চলতি ধাপ শেষ হলে এখানেই থামবে।"
+    const val MSG_ALREADY_PAUSED: String = "কাজ আগে থেকেই থামানো আছে।"
+    const val MSG_RESUMED: String = "কাজ আবার চলছে।"
+    const val MSG_NOTHING_TO_RERUN: String = "আবার চালানোর মতো ব্যর্থ বা বাতিল কাজ নেই।"
+    const val MSG_NOTHING_LEFT: String = "এই কাজের সব ধাপ আগেই শেষ হয়েছে।"
+    const val MSG_NO_TASK: String = "এখন কোনো কাজ নেই।"
+    const val MSG_HISTORY_CLEARED: String = "কাজের ইতিহাস মোছা হয়েছে।"
+    const val MSG_HISTORY_NOT_FOUND: String = "এই কাজটি ইতিহাসে পাওয়া যায়নি।"
+
+    /** The rerun of a task has the same title with this word in front. */
+    fun rerunTitle(title: String): String = "আবার: $title"
+
+    /** A rerun was put in the queue. */
+    fun rerunStarted(count: Int): String = "বাকি ${count}টি ধাপ আবার চালু করছি।"
+
+    /** The answer to "what is the progress?" while a task runs. */
+    fun statusRunning(done: Int, total: Int, current: String): String =
+        "${done}/${total} ধাপ শেষ। এখন: $current।"
+
+    /** The answer to "what is the progress?" while a task is paused. */
+    fun statusPaused(done: Int, total: Int): String = "কাজ থামানো আছে। ${done}/${total} ধাপ শেষ।"
+
+    /** The answer to "what is the progress?" while a task waits for the user. */
+    fun statusQuestion(done: Int, total: Int): String = "${done}/${total} ধাপ শেষ। আপনার উত্তরের অপেক্ষায় আছি।"
+
     const val OPTION_RETRY: String = "আবার চেষ্টা করো"
     const val OPTION_SKIP: String = "এই ধাপ বাদ দিয়ে এগোও"
     const val OPTION_CANCEL: String = "কাজ বাতিল করো"

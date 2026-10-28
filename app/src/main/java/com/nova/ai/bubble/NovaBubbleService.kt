@@ -88,7 +88,8 @@ class NovaBubbleService : Service() {
         if (notice != null) {
             if (snapshot.noticeSeq != lastNoticeSeq) {
                 lastNoticeSeq = snapshot.noticeSeq
-                overlay.showStatus(notice, MessageKind.ERROR, STATUS_MS)
+                overlay.showStatus(notice, if (snapshot.noticeIsError) MessageKind.ERROR else MessageKind.INFO, STATUS_MS)
+                if (!snapshot.noticeIsError) speakResult(notice)
             }
             return
         }
@@ -326,6 +327,15 @@ class NovaBubbleService : Service() {
         } else {
             buttons.add(PanelButton(getString(R.string.bub_menu_stop)) { EmergencyStop.trigger(SOURCE_MENU) })
         }
+        // P25: pause, resume or cancel the running task from the menu.
+        TaskHub.state.current?.takeIf { it.isOpen }?.let { task ->
+            if (task.status == TaskStatus.PAUSED) {
+                buttons.add(PanelButton(getString(R.string.bub_task_resume)) { TaskHub.resume() })
+            } else {
+                buttons.add(PanelButton(getString(R.string.bub_task_pause)) { TaskHub.pause() })
+            }
+            buttons.add(PanelButton(getString(R.string.bub_task_cancel)) { TaskHub.cancelCurrent() })
+        }
         buttons.add(PanelButton(getString(R.string.bub_menu_close)) { stopSelf() })
         overlay.showPanel(getString(R.string.bub_menu_title), buttons, MENU_MS, null)
     }
@@ -365,7 +375,7 @@ class NovaBubbleService : Service() {
         override fun onCommand(command: VoiceCommand) {
             overlay.showStatus("“${command.rawText}”", null, 0L)
             // P23: a command with several parts ("... তারপর ...") runs as a task, step by step.
-            if (!TaskHub.submitIfMultiStep(applicationContext, command.rawText)) {
+            if (!TaskHub.handleControl(applicationContext, command.rawText) && !TaskHub.submitIfMultiStep(applicationContext, command.rawText)) {
                 router.handle(command.rawText)
             }
         }
@@ -373,7 +383,11 @@ class NovaBubbleService : Service() {
         override fun onEnded(reason: ConversationEnd) {
             when (reason) {
                 is ConversationEnd.SingleCompleted, is ConversationEnd.UserStopped -> Unit
-                is ConversationEnd.StopPhrase -> overlay.hidePanel()
+                is ConversationEnd.StopPhrase -> {
+                    overlay.hidePanel()
+                    // P25: "থামো" also pauses a running task (it can be resumed).
+                    TaskHub.pauseIfRunning(applicationContext)
+                }
                 is ConversationEnd.SilenceTimeout ->
                     overlay.showStatus(getString(R.string.bub_not_heard), MessageKind.INFO, STATUS_MS)
                 is ConversationEnd.Failed -> {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- P25: task control and task history. -->
+<resources>
+    <string name="tskh_empty">এখনো কোনো কাজ শেষ হয়নি। কয়েকটি ধাপের কাজ চালালে এখানে জমা হবে।</string>
+    <string name="tskh_rerun">বাকি ধাপ আবার চালাও</string>
+    <string name="tskh_clear">ইতিহাস মোছো</string>
+    <string name="bub_task_pause">কাজ থামান</string>
+    <string name="bub_task_resume">কাজ চালিয়ে যান</string>
+</resources>

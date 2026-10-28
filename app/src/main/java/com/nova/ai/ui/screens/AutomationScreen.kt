@@ -11,6 +11,7 @@ import com.nova.ai.R
 import com.nova.ai.security.EmergencyStop
 import com.nova.ai.ui.components.NovaInfoCard
 import com.nova.ai.ui.components.TaskQueueCard
+import com.nova.ai.ui.components.TaskHistoryCard
 import com.nova.ai.ui.components.NovaScreenLayout
 
 /** Automation: routines, task history and the stop control. */
@@ -25,11 +26,8 @@ fun AutomationScreen(modifier: Modifier = Modifier) {
             title = stringResource(R.string.automation_routines_title),
             body = stringResource(R.string.automation_routines_none)
         )
-        NovaInfoCard(
-            title = stringResource(R.string.automation_history_title),
-            body = stringResource(R.string.automation_history_none)
-        )
         TaskQueueCard()
+        TaskHistoryCard()
 
         // Disabled until the emergency stop is implemented (P22).
         Button(

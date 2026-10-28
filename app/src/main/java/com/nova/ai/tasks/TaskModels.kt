@@ -105,7 +105,9 @@ data class QueueSnapshot(
     val current: TaskSnapshot?,
     val waiting: List<String>,
     val notice: String? = null,
-    val noticeSeq: Int = 0
+    val noticeSeq: Int = 0,
+    /** True if the notice is a problem; false if it is plain information (for example the progress). */
+    val noticeIsError: Boolean = true
 ) {
     companion object {
         /** An empty queue. */

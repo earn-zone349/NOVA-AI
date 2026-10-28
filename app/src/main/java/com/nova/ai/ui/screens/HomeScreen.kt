@@ -165,7 +165,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     transcript.add("$commandCount. ${command.rawText}")
                     while (transcript.size > TRANSCRIPT_LIMIT) transcript.removeAt(0)
                     // P23: a command with several parts ("... তারপর ...") runs as a task, step by step.
-                    if (TaskHub.submitIfMultiStep(context, command.rawText)) return
+                    if (TaskHub.handleControl(context, command.rawText) || TaskHub.submitIfMultiStep(context, command.rawText)) return
                     appController.handleCommand(command.rawText)
                     systemController.handleCommand(command.rawText)
                     contactController.handleCommand(command.rawText)
@@ -179,6 +179,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                             statusOverride = context.getString(R.string.home_status_ended_user)
                         is ConversationEnd.StopPhrase -> {
                             statusOverride = context.getString(R.string.home_status_ended_phrase)
+                            TaskHub.pauseIfRunning(context)
                             if (replyEnabled) {
                                 val english: Boolean = currentLanguage == AppLanguage.ENGLISH
                                 val ackRes: Int = if (english) {
@@ -337,7 +338,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     statusOverride = emptyText
                 } else {
                     statusOverride = receivedText
-                    if (TaskHub.submitIfMultiStep(context, commandText)) return@Button
+                    if (TaskHub.handleControl(context, commandText) || TaskHub.submitIfMultiStep(context, commandText)) return@Button
                     appController.handleCommand(commandText)
                     systemController.handleCommand(commandText)
                     contactController.handleCommand(commandText)

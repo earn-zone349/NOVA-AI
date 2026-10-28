@@ -22,6 +22,10 @@ interface TaskDao {
     @Query("UPDATE tasks SET status = :status, updatedAtMs = :updatedAtMs WHERE id = :taskId")
     fun updateStatus(taskId: String, status: String, updatedAtMs: Long): Int
 
+    /** Deletes every record except the newest [keep]. */
+    @Query("DELETE FROM tasks WHERE id NOT IN (SELECT id FROM tasks ORDER BY updatedAtMs DESC LIMIT :keep)")
+    fun trimTo(keep: Int): Int
+
     @Query("DELETE FROM tasks")
     fun clearAll(): Int
 }
